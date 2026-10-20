@@ -39,8 +39,12 @@ rm -rf "$APPDIR" && mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/lib"
 cp "$B/skyrecomp" "$APPDIR/usr/bin/"
 llvm-strip --strip-debug "$APPDIR/usr/bin/skyrecomp"  # (symbols stay: crash backtraces name functions)
 cp docs/icon/icon_1024.png "$APPDIR/usr/bin/icon.png"
-cp third_party/fonts/Baloo2/Baloo2-SemiBold.ttf "$APPDIR/usr/bin/"  # (start screen font, OFL)
-cp third_party/fonts/Baloo2/OFL.txt "$APPDIR/usr/bin/Baloo2-OFL.txt"
+FONT=third_party/fonts/Baloo2/Baloo2-SemiBold.ttf  # (start screen font, OFL)
+[ -f "$FONT" ] || FONT=Baloo2-SemiBold.ttf
+OFL=third_party/fonts/Baloo2/OFL.txt
+[ -f "$OFL" ] || OFL=Baloo2-OFL.txt
+cp "$FONT" "$APPDIR/usr/bin/"
+cp "$OFL" "$APPDIR/usr/bin/Baloo2-OFL.txt"
 cp README.md LICENSE "$APPDIR/usr/bin/"  # (licenses and source links of the bundled components: README "License")
 if [ -d "$L/helper/rando-gen" ]; then
     cp -R "$L/helper/rando-gen" "$APPDIR/usr/bin/"
