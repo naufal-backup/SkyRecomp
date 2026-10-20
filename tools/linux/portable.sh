@@ -22,7 +22,6 @@ D=$WORK/$NAME
 mkdir -p "$D/lib" "$D/extracted" "$D/mods"
 cp -a "$APPDIR/usr/bin/." "$D/"
 cp -a "$APPDIR/usr/lib/." "$D/lib/"
-cp tools/linux/skyrecomp.desktop "$D/"
 touch "$D/mods/.gitkeep"
 echo "Place your vanilla game files (romfs.bin or romfs/ and exefs/) here." > "$D/extracted/INSTRUCTIONS.txt"
 
@@ -61,9 +60,16 @@ game. The library is platform-specific:
 A Windows skygame.dll cannot be loaded on Linux, and a Linux build never produces
 one - see docs/BUILD-linux.md in the source repository.
 
+Add it to the application menu (start menu)
+-------------------------------------------
+Run ./install-desktop.sh once. It installs the icon into the user's icon theme and
+writes ~/.local/share/applications/skyrecomp.desktop with this folder's absolute
+path, then refreshes the desktop caches. No root needed. If your desktop still shows
+a generic icon, log out and back in (the shell caches menu icons).
+
 Using an AppImage instead? Sky Recomp-<version>-linux-x86_64.AppImage is the same
 build in a single file: chmod +x it and run it. It needs FUSE; otherwise use this
-archive.
+archive. Run install-desktop.sh from the extracted AppImage to add it to the menu.
 EOF
 
 mkdir -p build/dist

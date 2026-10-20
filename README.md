@@ -69,7 +69,7 @@ builder (`skygame.dll`); on Linux the start screen builds `skygame.so` with the 
 ### How to Play (Release Packages)
 1. Download the release package for your operating system:
    - **Windows**: `Sky Recomp-<version>-windows.zip`
-   - **Linux**: `Sky Recomp-<version>-linux-x86_64.AppImage` (or `aarch64`), or `SkyRecomp-<version>-Linux-x86_64.tar.gz` where AppImages cannot run
+   - **Linux**: `Sky Recomp-<version>-linux-x86_64.AppImage` (or `aarch64`), or `SkyRecomp-<version>-Linux-x86_64.tar.gz` where AppImages cannot run. In the archive, run `./install-desktop.sh` once to add Sky Recomp to the application menu with its icon.
    - **macOS**: `Sky Recomp-<version>-macOS.dmg`
 2. Prepare your legally obtained, uncompressed game files of *The Legend of Zelda: Skyward Sword HD* (v1.0.0).
 3. Start Sky Recomp:

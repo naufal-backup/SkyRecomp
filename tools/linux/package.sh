@@ -39,6 +39,7 @@ rm -rf "$APPDIR" && mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/lib"
 cp "$B/skyrecomp" "$APPDIR/usr/bin/"
 llvm-strip --strip-debug "$APPDIR/usr/bin/skyrecomp"  # (symbols stay: crash backtraces name functions)
 cp docs/icon/icon_1024.png "$APPDIR/usr/bin/icon.png"
+cp tools/linux/install-desktop.sh "$APPDIR/usr/bin/" && chmod +x "$APPDIR/usr/bin/install-desktop.sh"
 FONT=third_party/fonts/Baloo2/Baloo2-SemiBold.ttf  # (start screen font, OFL)
 [ -f "$FONT" ] || FONT=Baloo2-SemiBold.ttf
 OFL=third_party/fonts/Baloo2/OFL.txt
@@ -58,8 +59,15 @@ mkdir "$APPDIR/usr/bin/gamelib-src"
 cp runtime/cpu.h runtime/simd.h runtime/simd_fp.h runtime/gamelib.h tools/gamelib_entry.c runtime/hle/hle_symbols.txt \
    "$APPDIR/usr/bin/gamelib-src/"
 cp tools/linux/AppRun "$APPDIR/" && chmod +x "$APPDIR/AppRun"
+mkdir -p "$APPDIR/usr/share/applications"
 cp tools/linux/skyrecomp.desktop "$APPDIR/"
+cp tools/linux/skyrecomp.desktop "$APPDIR/usr/share/applications/"
 cp docs/icon/icon_1024.png "$APPDIR/skyrecomp.png" && ln -sf skyrecomp.png "$APPDIR/.DirIcon"
+# the icon by name in the icon theme (desktop integration reads the .desktop's Icon=skyrecomp); an absolute Icon=
+# path is not themed and some desktops fall back to a generic icon for it
+mkdir -p "$APPDIR/usr/share/icons/hicolor/256x256/apps" "$APPDIR/usr/share/icons/hicolor/512x512/apps"
+cp docs/icon/icon_1024.png "$APPDIR/usr/share/icons/hicolor/256x256/apps/skyrecomp.png"
+cp docs/icon/icon_1024.png "$APPDIR/usr/share/icons/hicolor/512x512/apps/skyrecomp.png"
 
 # libraries: what skyrecomp needs (DT_NEEDED, recursively) that deps/ provides; anything else must be a system one
 needed() { readelf -d "$1" | sed -n 's/.*(NEEDED).*\[\(.*\)\]/\1/p'; }

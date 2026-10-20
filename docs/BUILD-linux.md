@@ -147,6 +147,8 @@ chmod +x "build/dist/Sky Recomp-<version>-linux-x86_64.AppImage"
 The GitHub Actions release workflow (`.github/workflows/build-releases.yml`) builds exactly this AppImage in an Ubuntu 22.04 container and also packs the same tree as a plain archive,
 `build/dist/SkyRecomp-<version>-Linux-x86_64.tar.gz` (produced by `tools/linux/portable.sh x86_64` after the AppImage build), for systems that cannot run AppImages.
 
+The archive and the extracted AppImage contain `install-desktop.sh`. Running it once adds Sky Recomp to the user's application menu (`~/.local/share/applications/skyrecomp.desktop`) and installs the icon into the hicolor icon theme as `skyrecomp`, so the shortcut shows the game's icon instead of a generic one. It needs no root and does not change the game data folder.
+
 ---
 
 ## 5. Data Directory & Mods on Linux

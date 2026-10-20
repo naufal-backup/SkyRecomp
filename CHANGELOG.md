@@ -16,6 +16,12 @@
   with the bundled `lasgen` and `zig`, shows the build progress, and no longer accepts a Windows DLL as the game
   library on those platforms. `docs/BUILD-linux.md` documents both flows (`make gen && make` in a source checkout),
   and `build_game.py` refuses to run on non-Windows systems instead of producing a Windows DLL there.
+- **Start menu entry with its icon on Linux**: `tools/linux/install-desktop.sh` (shipped in the portable archive and
+  next to the executable) installs the icon into the user's hicolor icon theme as `skyrecomp` and writes
+  `~/.local/share/applications/skyrecomp.desktop` with this folder's absolute `Exec` path. The entry now uses
+  `Icon=skyrecomp` (an absolute `Icon=` path is not themed, which is why the shortcut could show a generic icon),
+  sets `StartupWMClass`, and refreshes the desktop caches; no root needed.
+- The Linux build scripts are executable in git, so `make appimage` works from a clean checkout.
 
 ### Changed
 
