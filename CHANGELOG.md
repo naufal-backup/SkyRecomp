@@ -1,5 +1,24 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- **Linux release: no more missing `libavformat.so.60` (issue #17)**. The Linux release is now built by the same
+  containerized pipeline as `make appimage` (Ubuntu 22.04, glibc 2.35+) instead of directly on the CI runner. The
+  binary is compiled against, and ships, its own LGPL FFmpeg, SDL3 and shaderc, so the distribution's FFmpeg version
+  (6.x, 7.x, 8.x, ...) no longer matters. The release now contains
+  `Sky Recomp-<version>-linux-x86_64.AppImage` and a portable `SkyRecomp-<version>-Linux-x86_64.tar.gz`.
+- **Linux game code is `skygame.so`, not `skygame.dll` (issue #17)**. `docs/BUILD-linux.md` now documents the Linux
+  flow explicitly (`make gen && make`, or **Set up game files** on the start screen, which uses the bundled
+  `lasgen` and `zig`), and `build_game.py` refuses to run on non-Windows systems with an explanation instead of
+  producing a Windows DLL on Linux.
+
+### Changed
+
+- The GitHub Actions release workflow builds and publishes the Linux AppImage and portable archive from a
+  `workflow_dispatch` run as well as from a tag push, creating the release if it does not exist yet.
+
 ## [1.0.5] - 2026-10-20
 
 ### Added

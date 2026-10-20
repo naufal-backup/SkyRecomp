@@ -9,14 +9,16 @@ cd "$(dirname "$0")/../.."
 ARCH=${1:?usage: tools/linux/appimage.sh x86_64|aarch64}
 case $ARCH in x86_64) PODARCH=amd64 ;; aarch64) PODARCH=arm64 ;;
     *) echo "unknown arch $ARCH"; exit 1 ;; esac
+# The container engine; CI without working rootless podman sets PODMAN="sudo -E podman" (two words on purpose)
+PODMAN=${PODMAN:-podman}
 
 image() {  # arch -> tag (built once, then cached by podman)
-    podman build -q --arch "$1" -t "localhost/skyrecomp-build:$1" -f tools/linux/Containerfile tools/linux >/dev/null
+    $PODMAN build -q --arch "$1" -t "localhost/skyrecomp-build:$1" -f tools/linux/Containerfile tools/linux >/dev/null
     echo "localhost/skyrecomp-build:$1"
 }
 run() {  # image, command...: the checkout mounted at /src
     local img=$1; shift
-    podman run --rm --arch "${img##*:}" -v "$PWD:/src" -w /src -e SYSROOT=/src/build/linux/aarch64/sysroot "$img" "$@"
+    $PODMAN run --rm --arch "${img##*:}" -v "$PWD:/src" -w /src -e SYSROOT=/src/build/linux/aarch64/sysroot "$img" "$@"
 }
 
 AMD=$(image amd64)
@@ -25,10 +27,10 @@ if [ "$ARCH" = aarch64 ]; then
     S=build/linux/aarch64/sysroot
     if [ ! -f "$S/.ok" ]; then  # the arm64 image's files: headers and libraries to cross-compile against
         rm -rf "$S" && mkdir -p "$S"
-        c=$(podman create --arch arm64 "$ARM")
+        c=$($PODMAN create --arch arm64 "$ARM")
         # (anchored: only the top-level pseudo filesystems, not e.g. usr/include/<triple>/sys)
-        podman export "$c" | tar -x -C "$S" --anchored --exclude='dev/*' --exclude='proc/*' --exclude='sys/*' 2>/dev/null || true
-        podman rm -f "$c" >/dev/null
+        $PODMAN export "$c" | tar -x -C "$S" --anchored --exclude='dev/*' --exclude='proc/*' --exclude='sys/*' 2>/dev/null || true
+        $PODMAN rm -f "$c" >/dev/null
         # absolute symlinks (libm.so -> /lib/aarch64-linux-gnu/libm.so.6) would point into this machine's root:
         # relative, so they stay inside the sysroot
         find "$S" -type l -lname '/*' | while read -r l; do

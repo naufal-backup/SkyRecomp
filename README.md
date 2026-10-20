@@ -47,6 +47,11 @@
 [ Native Execution at 60 FPS (Vulkan / Metal) ]
 ```
 
+The game code library is always named for the platform it runs on. `build_game.py` is the Windows
+builder (`skygame.dll`); on Linux the start screen builds `skygame.so` with the bundled `zig` and
+`lasgen`, or `make gen && make` does it in a source checkout. See
+[docs/BUILD-linux.md](docs/BUILD-linux.md#3a-game-code-skygameso-not-skygamedll).
+
 ---
 
 ## Getting Started
@@ -64,7 +69,7 @@
 ### How to Play (Release Packages)
 1. Download the release package for your operating system:
    - **Windows**: `Sky Recomp-<version>-windows.zip`
-   - **Linux**: `Sky Recomp-<version>-linux-x86_64.AppImage` (or `aarch64`)
+   - **Linux**: `Sky Recomp-<version>-linux-x86_64.AppImage` (or `aarch64`), or `SkyRecomp-<version>-Linux-x86_64.tar.gz` where AppImages cannot run
    - **macOS**: `Sky Recomp-<version>-macOS.dmg`
 2. Prepare your legally obtained, uncompressed game files of *The Legend of Zelda: Skyward Sword HD* (v1.0.0).
 3. Start Sky Recomp:

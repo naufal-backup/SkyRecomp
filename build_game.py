@@ -69,6 +69,20 @@ def compile_unit(src, obj):
     return True, src, None, dt
 
 def main():
+    # This script is the Windows game-code builder: it produces skygame.dll for skyrecomp.exe and needs the import
+    # library of that .exe. Linux and macOS use a different library kind (skygame.so / skygame.dylib), built by the
+    # start screen or by `make gen && make` - never as a .dll (issue #17).
+    if os.name != "nt":
+        sys.exit(
+            "build_game.py builds the Windows game code library (skygame.dll for skyrecomp.exe).\n"
+            "\n"
+            "On Linux the game code is built as skygame.so instead:\n"
+            "  * in the release (AppImage or portable archive): start Sky Recomp, pick your game files\n"
+            "    folder on the start screen and click \"Set up game files\" - it uses the bundled zig and lasgen;\n"
+            "  * in a source checkout: make gen && make (the result is build/skygame.so).\n"
+            "\n"
+            "Never copy a Windows skygame.dll into a Linux installation: the Linux runtime cannot load a PE DLL."
+        )
     print("==================================================")
     print("  Skyward Sword HD PC Recompilation Builder")
     print("==================================================")
