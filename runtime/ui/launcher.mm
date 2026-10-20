@@ -19,6 +19,7 @@
 #include <vector>
 #include <algorithm>
 #include <atomic>
+#include <thread>
 
 #include "imgui.h"
 #include "imgui_internal.h"  // (SetKeyOwner)
@@ -184,7 +185,12 @@ static std::string check_copied_files(const std::string &root) {
 // "" = ready to play, else what is wrong
 static std::string check_game_files(const std::string &root) {
     std::string why = check_copied_files(root);
+#ifdef _WIN32
+    // (a prebuilt .dll from build_game.py counts as built; on Linux/macOS only the platform's own library does)
     if (why.empty() && !gamelib_present(root.c_str()) && !file_exists(root + "/skygame.dll") && !file_exists("extracted/skygame.dll")) return "Game code not built yet";
+#else
+    if (why.empty() && !gamelib_present(root.c_str())) return "Game code not built yet";
+#endif
     return why;
 }
 
@@ -280,27 +286,60 @@ static float extract_progress(void) {
     return f < 0 ? 0 : f > 0.99f ? 0.99f : f;
 }
 
-// Verifies the precompiled game code exists (skygame.dll); false = missing
+// Makes sure the recompiled game code (runtime/gamelib.h) is there: a library next to the executable or already in
+// the data folder is used as is; otherwise the setup builds it from the player's own game files with the generator
+// and compiler shipped with the release (runtime/gamebuild.c). false = it is not available.
 static bool build_game_code(void) {
-    if (file_exists(g_root + "/skygame.dll") || gamelib_present(g_root.c_str()) ||
-        file_exists("extracted/skygame.dll") || file_exists("skygame.dll")) {
-        return true;
-    }
-    // If skygame.dll is in extracted/ but not yet in g_root:
-    if (file_exists("extracted/skygame.dll") && !file_exists(g_root + "/skygame.dll")) {
-        FILE *in = fopen("extracted/skygame.dll", "rb");
+    if (gamelib_present(g_root.c_str())) return true;
+
+#ifdef _WIN32
+    if (file_exists(g_root + "/skygame.dll")) return true;
+    // If skygame.dll is in extracted/ (or next to the exe) but not yet in g_root: copy it there
+    const char *const from[] = {"extracted/skygame.dll", "skygame.dll"};
+    for (const char *src : from) {
+        if (!file_exists(src)) continue;
+        FILE *in = fopen(src, "rb");
         FILE *out = fopen((g_root + "/skygame.dll").c_str(), "wb");
-        if (in && out) {
-            char buf[1024 * 1024];
-            size_t n;
-            while ((n = fread(buf, 1, sizeof buf, in)) > 0) fwrite(buf, 1, n, out);
+        if (!in || !out) {
+            if (in) fclose(in);
+            if (out) fclose(out);
+            break;
         }
-        if (in) fclose(in);
-        if (out) fclose(out);
+        char buf[1024 * 1024];
+        size_t n;
+        while ((n = fread(buf, 1, sizeof buf, in)) > 0) fwrite(buf, 1, n, out);
+        fclose(in);
+        fclose(out);
         return true;
     }
     set_job("Game library (skygame.dll) is missing from extracted folder.", true, "Please ensure skygame.dll is present.");
     return false;
+#else
+    // Linux (skygame.so) and macOS (skygame.dylib): the game code is not shipped, so build it here. The release has
+    // the generator (lasgen/) and the compiler (zig/) next to the executable; a source checkout uses tools/gen.py and
+    // clang. Never a Windows DLL - that cannot be loaded on these platforms (issue #17).
+    if (!gamebuild_available()) {
+        set_job("The game code builder is missing from this copy of Sky Recomp.", true,
+                "Keep the lasgen/, zig/ and gamelib-src/ folders next to the executable.");
+        return false;
+    }
+    char why[512] = "";
+    GameBuildOpts opts = {};
+    opts.progress = build_progress;
+    opts.jobs = (int)std::thread::hardware_concurrency();
+    set_job("Building the game code...");
+    bool ok = gamebuild_run(g_root.c_str(), &opts, why, sizeof why);
+    g_build_frac = -1;
+    if (!ok) {
+        set_job("The game code didn't build.", true, why);
+        return false;
+    }
+    if (!gamelib_present(g_root.c_str())) {
+        set_job("The game code didn't build.", true, "The library was not written to the data folder.");
+        return false;
+    }
+#endif
+    return true;
 }
 
 static void *extract_thread(void *) {

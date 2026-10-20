@@ -9,10 +9,13 @@
   binary is compiled against, and ships, its own LGPL FFmpeg, SDL3 and shaderc, so the distribution's FFmpeg version
   (6.x, 7.x, 8.x, ...) no longer matters. The release now contains
   `Sky Recomp-<version>-linux-x86_64.AppImage` and a portable `SkyRecomp-<version>-Linux-x86_64.tar.gz`.
-- **Linux game code is `skygame.so`, not `skygame.dll` (issue #17)**. `docs/BUILD-linux.md` now documents the Linux
-  flow explicitly (`make gen && make`, or **Set up game files** on the start screen, which uses the bundled
-  `lasgen` and `zig`), and `build_game.py` refuses to run on non-Windows systems with an explanation instead of
-  producing a Windows DLL on Linux.
+- **Linux game code is `skygame.so`, not `skygame.dll` (issue #17)**. The start screen never called the bundled game
+  code builder (`gamebuild_run` in `runtime/gamebuild.c`): "Set up game files" only looked for a Windows
+  `skygame.dll`, so on Linux it always ended with "Game library (skygame.dll) is missing" and PLAY reported that the
+  game code had not been built. Setup now builds `skygame.so` (and `skygame.dylib` on macOS) from the player's files
+  with the bundled `lasgen` and `zig`, shows the build progress, and no longer accepts a Windows DLL as the game
+  library on those platforms. `docs/BUILD-linux.md` documents both flows (`make gen && make` in a source checkout),
+  and `build_game.py` refuses to run on non-Windows systems instead of producing a Windows DLL there.
 
 ### Changed
 
