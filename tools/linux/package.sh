@@ -42,8 +42,12 @@ cp docs/icon/icon_1024.png "$APPDIR/usr/bin/icon.png"
 cp third_party/fonts/Baloo2/Baloo2-SemiBold.ttf "$APPDIR/usr/bin/"  # (start screen font, OFL)
 cp third_party/fonts/Baloo2/OFL.txt "$APPDIR/usr/bin/Baloo2-OFL.txt"
 cp README.md LICENSE "$APPDIR/usr/bin/"  # (licenses and source links of the bundled components: README "License")
-[ -d "$L/helper/rando-gen" ] || { echo "no seed generator helper: tools/linux/rando_helper.sh $ARCH first"; exit 1; }
-cp -R "$L/helper/rando-gen" "$APPDIR/usr/bin/"
+if [ -d "$L/helper/rando-gen" ]; then
+    cp -R "$L/helper/rando-gen" "$APPDIR/usr/bin/"
+else
+    # (the seed generator needs the vendored LAS-Randomizer, which is not in every checkout: the game itself runs)
+    echo "package: no seed generator helper ($L/helper/rando-gen): the Randomizer tab will report it missing"
+fi
 [ -d "$L/helper/lasgen" ] || { echo "no game code generator helper: tools/linux/rando_helper.sh $ARCH first"; exit 1; }
 cp -R "$L/helper/lasgen" build/zig "$APPDIR/usr/bin/"
 mkdir "$APPDIR/usr/bin/gamelib-src"
