@@ -62,14 +62,16 @@ static int held_key(int sc) {
 // Motion is accumulated on the main thread (input_handle_event), folded into one atomic contribution per frame in
 // input_frame (render thread), and merely added by fill_state (game thread, polled several times a frame - so the
 // contribution must be stable there and must not be zeroed).
-static _Atomic int32_t mouse_dx, mouse_dy;     // motion since the last flush (xrel / yrel, in pixels)
+static _Atomic int32_t mouse_dx, mouse_dy;     // motion since the last flush (xrel / yrel, in 1/256ths of a pixel)
 static _Atomic int32_t mouse_rs_x, mouse_rs_y; // this frame's right-stick contribution (0 = the mouse isn't aiming)
 static _Atomic bool mouse_aim_live;            // the game's frame loop is running (not the start screen)
 static bool mouse_relative;                    // (main thread) relative mouse mode as it stands
 static _Atomic bool mouse_aim_toggled;           // MOUSE_AIM_TOGGLE: the aim latched by one press of the aim button
-static uint64_t mouse_relative_at;             // (main thread) when it came on (its own first motion is discarded)
+static uint64_t mouse_relative_at;
+static int32_t coast_rx, coast_ry;              // the last contribution, kept while coasting (render thread only)
+static uint64_t coast_until;                    // for that long after the last motion (render thread only)             // (main thread) when it came on (its own first motion is discarded)
 
-#define MOUSE_REL_SETTLE_NS 50000000ull  // the mode switch's own jump: motion this early after it isn't the player's
+#define MOUSE_REL_SETTLE_NS 30000000ull  // the mode switch's own jump: motion this early after it isn't the player's
 
 static int mouse_aim_button(void) {  // (settings_load keeps this to the UI's three: Mouse 5 / Mouse 4 / Mouse 3)
     int b = g_settings.mouse_aim_mod;
@@ -111,16 +113,22 @@ void input_mouse_pump(void) {
 // Once per frame (input_frame): this frame's motion becomes one contribution. Scaled by the frame rate so a pixel
 // of mouse travel means the same at 30 / 40 / 60 / 120 FPS: at 60 FPS it is motion x sensitivity x 100.
 static void mouse_aim_flush(void) {
-    int dx = atomic_exchange(&mouse_dx, 0), dy = atomic_exchange(&mouse_dy, 0);
+    float dx = (float)atomic_exchange(&mouse_dx, 0) / 256.0f, dy = (float)atomic_exchange(&mouse_dy, 0) / 256.0f;
+    bool wanted = mouse_aim_wanted();
+    bool item = (key_buttons | pad_buttons) & (1ull << BTN_R);  // aiming an item is precision work: never coasts
     int rx = 0, ry = 0;
-    if ((dx || dy) && mouse_aim_wanted()) {
+    if ((dx || dy) && wanted) {
         float kx = g_settings.mouse_aim_sens_x * 100.0f * ((float)rt_frame_rate() / 60.0f);
         float ky = g_settings.mouse_aim_sens_y * 100.0f * ((float)rt_frame_rate() / 60.0f);
-        float fx = (float)dx * kx, fy = (float)dy * ky;
+        float fx = dx * kx, fy = dy * ky;
         rx = fx > 32767.0f ? 32767 : fx < -32767.0f ? -32767 : (int)lroundf(fx);
         fy = g_settings.mouse_aim_invert ? fy : -fy;  // screen down is stick down (the stick's up is positive)
         ry = fy > 32767.0f ? 32767 : fy < -32767.0f ? -32767 : (int)lroundf(fy);
-    }
+        coast_rx = rx, coast_ry = ry;
+        coast_until = SDL_GetTicksNS() + (item ? 0 : (uint64_t)g_settings.mouse_aim_coast * 1000000ull);
+    } else if (wanted && !item && SDL_GetTicksNS() < coast_until) {
+        rx = coast_rx, ry = coast_ry;  // coast: the stick is a position the mouse cannot hold, so the last turn is
+    } else coast_until = 0;            // kept a moment (the Coast setting): held directions need no nudging
     atomic_store(&mouse_rs_x, rx);
     atomic_store(&mouse_rs_y, ry);
 }
@@ -271,8 +279,10 @@ void input_handle_event(const SDL_Event *e) {
         // Only what relative mode asked for steers the aim (a wandering cursor must not), and never the jump the
         // mode switch itself makes - so a stray pixel of absolute motion never reaches the stick.
         if (mouse_relative && SDL_GetTicksNS() > mouse_relative_at + MOUSE_REL_SETTLE_NS) {
-            atomic_fetch_add(&mouse_dx, (int32_t)lroundf(e->motion.xrel));
-            atomic_fetch_add(&mouse_dy, (int32_t)lroundf(e->motion.yrel));
+            // 1/256ths of a pixel (mouse_aim_flush divides them back): rounding whole pixels per event
+            // loses the fine motion that high sensitivities run on
+            atomic_fetch_add(&mouse_dx, (int32_t)lroundf(e->motion.xrel * 256.0f));
+            atomic_fetch_add(&mouse_dy, (int32_t)lroundf(e->motion.yrel * 256.0f));
         }
         break;
     case SDL_EVENT_GAMEPAD_ADDED:

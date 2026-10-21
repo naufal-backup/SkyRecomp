@@ -136,6 +136,9 @@ extern "C" void controls_bindings_draw(float scale) {
         float sy = g_settings.mouse_aim_sens_y;
         if (ImGui::SliderFloat("Sensitivity Y", &sy, 0.05f, 100.0f, "%.2f")) g_settings.mouse_aim_sens_y = sy;
         if (ImGui::IsItemDeactivatedAfterEdit()) settings_save();
+        int coast = g_settings.mouse_aim_coast;
+        if (ImGui::SliderInt("Coast after stop", &coast, 0, 600, "%d ms")) g_settings.mouse_aim_coast = coast;
+        if (ImGui::IsItemDeactivatedAfterEdit()) settings_save();
         bool inv = g_settings.mouse_aim_invert;
         if (ImGui::Checkbox("Invert Y", &inv)) {
             g_settings.mouse_aim_invert = inv;
@@ -150,8 +153,10 @@ extern "C" void controls_bindings_draw(float scale) {
                             "press of the button; the next press releases it, and it unlatches on a reboot to the "
                             "start screen or a mode switch. While latched the cursor stays locked - the in-game menu "
                             "and an unfocused window take it back, and it is locked again when they close. "
-                            "Sensitivities (X and Y) are a feel: raise them in game if aiming turns too little. The "
-                            "aim button is still a mouse button of its own here, so binding it also binds that press.");
+                            "Sensitivities (X and Y) are a feel: raise them in game if aiming turns too little. "
+                            "Coast keeps a turn going for a moment after the mouse stops, so held directions need "
+                            "no constant nudging - aiming an item with R never coasts. The aim button is still a "
+                            "mouse button of its own here, so binding it also binds that press.");
         ImGui::PopTextWrapPos();
     }
 }

@@ -16,6 +16,9 @@
   sensitivity loads as both) and **Invert Y**, on the Controls page of the start screen and
   of the in-game menu. While the mouse is steering, the cursor is captured (relative mouse mode) and comes back for
   the menu, a lost focus and the start screen.
+- **The aim also coasts**: after the mouse stops, the last turn keeps going for a moment (**Coast**, 0-600 ms,
+  default 200) so held directions need no constant nudging - aiming an item with R never coasts. The mouse's
+  motion is now accumulated in 1/256ths of a pixel, keeping high sensitivities precise on fine movements.
 - **30 FPS and 40 FPS targets**: **Video > Frame rate** now offers 30 / 40 / 60 / 120 FPS. Game speed is preserved
   by running the simulation's original ticks over fewer frames (as at 60, without elapsed-time correction); 60 FPS
   remains the default and the 120 FPS path is untouched. No regenerated game code is needed: the timing hooks apply
