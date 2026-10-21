@@ -6,7 +6,7 @@ on:
       release_tag:
         description: Release tag to build and publish (the release is created if it does not exist)
         required: true
-        default: v1.0.7
+        default: v1.0.8
         type: string
   push:
     tags:
