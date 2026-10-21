@@ -1183,6 +1183,8 @@ int ui_run(void) {
             if (menu_handle_event(&e)) continue;
             input_handle_event(&e);
         }
+        extern void input_mouse_pump(void);  // the aim's relative mouse mode: on while it steers, off again (input.c)
+        input_mouse_pump();
         menu_apply_window_requests(window);
         int w, h;
         SDL_GetWindowSizeInPixels(window, &w, &h);

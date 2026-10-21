@@ -2,6 +2,39 @@
 
 ## [Unreleased]
 
+### Added
+
+- **Mouse aim (the mouse as the right stick)**: hold the aim mouse button (**Mouse 5** by default; **Mouse 5** /
+  **Mouse 4** / **Mouse 3** selectable in **Controls > Mouse aim**) and move the mouse to steer the right stick -
+  aim an item after raising it with R, turn the camera while L is held, and swing with a flick of the mouse. The
+  stick is never moved for you on its own, so walking, swinging and every button binding (Mouse 4 / 5 included)
+  behave exactly as before. Options: **Steer with the mouse** (Off / While the aim button is held / Also while R is
+  held, which aims while an item is up without the button), **Aim button**, **Sensitivity** (0.05-3.0, default 0.5)
+  and **Invert Y**, on the Controls page of the start screen and of the in-game menu. While the mouse is steering,
+  the cursor is captured (relative mouse mode) and comes back for the menu, a lost focus and the start screen.
+- **30 FPS and 40 FPS targets**: **Video > Frame rate** now offers 30 / 40 / 60 / 120 FPS. Game speed is preserved
+  by running the simulation's original ticks over fewer frames (as at 60, without elapsed-time correction); 60 FPS
+  remains the default and the 120 FPS path is untouched. No regenerated game code is needed: the timing hooks apply
+  whatever the target is.
+- **Button prompts in the Keyboard icon style show mouse bindings**: a mouse pictogram (which button marked on it)
+  is drawn instead of the previous `?` for Mouse 1-5 bindings.
+- This fork (`skyrecomp-mouse-support`) builds and publishes its **Linux releases automatically** (tag `v*` or a
+  manual `workflow_dispatch` run): the workflow creates the release if missing, builds the AppImage and portable
+  archive in the Ubuntu 22.04 container and uploads them. The macOS job was removed, and the start screen's update
+  check now looks at this fork's releases instead of upstream's.
+
+### Notes
+
+- Mouse aim feel is estimated from the game's input design: **Sensitivity** (default 0.5) and the R-hold gate of
+  **Also while R is held** still need tuning against real game files - raise Sensitivity in game if aiming turns too
+  little, and say so if the R gate aims at the wrong moment.
+- The aim button stays an ordinary bindable mouse button: if you bind it yourself, holding it to aim also presses
+  that binding (Mouse 5 is not bound to anything by default).
+- Mouse pictograms are drawn only in the **Keyboard** icon style; the controller styles keep showing controller
+  glyphs, where a mouse binding shows the generic dot (as any keyboard binding did).
+- 30 / 40 FPS run the game with larger simulation steps than it was tuned for. Like 120 FPS, they are best verified
+  in play (combat, flight, cutscenes); switch back to 60 FPS if anything looks off.
+
 ### Fixed
 
 - **Linux release: no more missing `libavformat.so.60` (issue #17)**. The Linux release is now built by the same

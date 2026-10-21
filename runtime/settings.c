@@ -27,6 +27,9 @@ Settings g_settings = {
     .movie_audio = true,
     .show_fps = false,
     .frame_rate = 60,
+    .mouse_aim = MOUSE_AIM_MODIFIER,  // the mouse steers the right stick while Mouse 5 is held
+    .mouse_aim_sens = 0.5f,
+    .mouse_aim_mod = 5,               // SDL_BUTTON_X2 = Mouse 5 (SDL_mouse.h: 3 middle, 4 Mouse 4, 5 Mouse 5)
     .inv_keys = true,
     .tracker = true,
     .chaos_letters = CHAOS_LETTERS_MAP,
@@ -76,6 +79,17 @@ const char *settings_language_name(void) {
     return "English";
 }
 
+// The frame rate the game may run at (30 / 40 / 60 / 120); anything else in the file is 60 (an older build's
+// value, a hand-edited line)
+static int frame_rate_of(int v) { return v == 30 || v == 40 || v == 120 ? v : 60; }
+
+// The aim mouse button, as written in the file: "mouse5" (Mouse 5, the default) / "mouse4" / "mouse3", or just 5.
+// The UI offers exactly those three, so anything else (a hand-edited left / right click) reads back as Mouse 5.
+static int mouse_button_of(const char *v) {
+    int b = !strncmp(v, "mouse", 5) && v[5] ? atoi(v + 5) : atoi(v);
+    return b >= 3 && b <= 5 ? b : 5;
+}
+
 void settings_load(void) {
     static bool loaded;
     if (loaded) return;
@@ -109,7 +123,7 @@ void settings_load(void) {
         else if (!strcmp(key, "reverb")) g_settings.reverb = atoi(val) != 0;
         else if (!strcmp(key, "movie_audio")) g_settings.movie_audio = atoi(val) != 0;
         else if (!strcmp(key, "show_fps")) g_settings.show_fps = atoi(val) != 0;
-        else if (!strcmp(key, "frame_rate")) g_settings.frame_rate = atoi(val) == 120 ? 120 : 60;
+        else if (!strcmp(key, "frame_rate")) g_settings.frame_rate = frame_rate_of(atoi(val));
         else if (!strcmp(key, "resolution")) {
             int n = atoi(val);
             g_settings.res_mode = !strcmp(val, "dynamic") ? RES_DYNAMIC : (!strcmp(val, "75%") || !strcmp(val, "67%")) ? RES_Q75 :
@@ -121,6 +135,14 @@ void settings_load(void) {
         else if (!strcmp(key, "inv_keys")) g_settings.inv_keys = atoi(val) != 0;
         else if (!strcmp(key, "dpad_move")) g_settings.dpad_move = atoi(val) != 0;
         else if (!strcmp(key, "move_360")) g_settings.move_360 = atoi(val) != 0;
+        else if (!strcmp(key, "mouse_aim")) {  // 0 = off, 2 = auto, anything else: the default (hold the button)
+            int m = atoi(val);
+            g_settings.mouse_aim = m == MOUSE_AIM_OFF ? MOUSE_AIM_OFF : m == MOUSE_AIM_AUTO ? MOUSE_AIM_AUTO
+                                                                                           : MOUSE_AIM_MODIFIER;
+        }
+        else if (!strcmp(key, "mouse_aim_sens")) g_settings.mouse_aim_sens = (float)atof(val);
+        else if (!strcmp(key, "mouse_aim_invert")) g_settings.mouse_aim_invert = atoi(val) != 0;
+        else if (!strcmp(key, "mouse_aim_mod")) g_settings.mouse_aim_mod = mouse_button_of(val);
         else if (!strcmp(key, "disabled_mods") || !strcmp(key, "mod_order")) mods_settings_load(key, val);
         else if (!strcmp(key, "blur_removal")) g_settings.blur_removal = atoi(val) != 0;
         else if (!strcmp(key, "hide_hero_icon")) g_settings.hide_hero_icon = atoi(val) != 0;
@@ -155,6 +177,9 @@ void settings_load(void) {
     if (!aspect_key) g_settings.aspect_asked = true;  // (likewise: the aspect ratio was chosen already)
     if (g_settings.volume < 0) g_settings.volume = 0;
     if (g_settings.volume > 2) g_settings.volume = 2;
+    if (g_settings.mouse_aim_sens < 0.05f) g_settings.mouse_aim_sens = 0.05f;  // (a 0 here would mute the mouse)
+    if (g_settings.mouse_aim_sens > 3.0f) g_settings.mouse_aim_sens = 3.0f;
+    g_settings.frame_rate = frame_rate_of(g_settings.frame_rate);
     LOG("[settings] loaded %s\n", SETTINGS_FILE);
 }
 
@@ -181,6 +206,9 @@ void settings_save(void) {
     fprintf(f, "dpad_move = %d\n", g_settings.dpad_move);
     fprintf(f, "move_360 = %d\nblur_removal = %d\nhide_hero_icon = %d\n", g_settings.move_360, g_settings.blur_removal,
             g_settings.hide_hero_icon);
+    fprintf(f, "mouse_aim = %d\nmouse_aim_sens = %.2f\nmouse_aim_invert = %d\nmouse_aim_mod = mouse%d\n",
+            g_settings.mouse_aim, g_settings.mouse_aim_sens, g_settings.mouse_aim_invert,
+            g_settings.mouse_aim_mod >= 3 && g_settings.mouse_aim_mod <= 5 ? g_settings.mouse_aim_mod : 5);
     mods_settings_save(f);
     static const char *const prompts[] = {"auto", "nintendo", "xbox", "playstation", "keyboard"};
     fprintf(f, "prompts = %s\n", g_settings.prompts >= 0 && g_settings.prompts < 5 ? prompts[g_settings.prompts] : "auto");

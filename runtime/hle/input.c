@@ -53,6 +53,73 @@ static int held_key(int sc) {
     return sc > 0 && sc < SDL_SCANCODE_COUNT && (keys_down[sc] || test_keys[sc]);
 }
 
+// ------------------------------------------------------------------ mouse aim (the mouse as the right stick)
+// In this game the right stick is overloaded: it aims an item Link has raised with R, turns the camera (L held)
+// and swings the sword. The mouse therefore never stands in for it on its own - MOUSE_AIM_MODIFIER (the default)
+// arms it with a mouse button (Mouse 5, also bindable as a button like any other), and MOUSE_AIM_AUTO additionally
+// while R is held, which is the game's own "aiming an item" hold.
+// Motion is accumulated on the main thread (input_handle_event), folded into one atomic contribution per frame in
+// input_frame (render thread), and merely added by fill_state (game thread, polled several times a frame - so the
+// contribution must be stable there and must not be zeroed).
+static _Atomic int32_t mouse_dx, mouse_dy;     // motion since the last flush (xrel / yrel, in pixels)
+static _Atomic int32_t mouse_rs_x, mouse_rs_y; // this frame's right-stick contribution (0 = the mouse isn't aiming)
+static _Atomic bool mouse_aim_live;            // the game's frame loop is running (not the start screen)
+static bool mouse_relative;                    // (main thread) relative mouse mode as it stands
+static uint64_t mouse_relative_at;             // (main thread) when it came on (its own first motion is discarded)
+
+#define MOUSE_REL_SETTLE_NS 50000000ull  // the mode switch's own jump: motion this early after it isn't the player's
+
+static int mouse_aim_button(void) {  // (settings_load keeps this to the UI's three: Mouse 5 / Mouse 4 / Mouse 3)
+    int b = g_settings.mouse_aim_mod;
+    return b >= 3 && b <= 5 ? b : SDL_BUTTON_X2;
+}
+
+// While the mouse may steer the right stick: aim on, no menu / name entry up, the aim button held - in auto mode
+// also whenever R is held (an item raised: aiming it, exactly what the right stick does then).
+static bool mouse_aim_wanted(void) {
+    if (g_settings.mouse_aim == MOUSE_AIM_OFF || menu_input_captured()) return false;
+    if (held_key(512 + mouse_aim_button())) return true;
+    if (g_settings.mouse_aim != MOUSE_AIM_AUTO) return false;
+    return (key_buttons | pad_buttons) & (1ull << BTN_R);
+}
+
+SDL_Window *ui_window(void);  // runtime/nvn/vulkan/device.c / runtime/nvn/metal.m
+
+// Main thread: the event loop of both backends, and the start screen's. The cursor is hidden and motion has no
+// window edges exactly while the mouse steers, and comes back for the menu / a lost focus / the start screen.
+void input_mouse_pump(void) {
+    SDL_Window *w = ui_window();
+    if (!w) return;
+    bool want = mouse_aim_live && mouse_aim_wanted() && (SDL_GetWindowFlags(w) & SDL_WINDOW_INPUT_FOCUS) != 0;
+    if (want == mouse_relative) return;
+    mouse_relative = want;
+    SDL_SetWindowRelativeMouseMode(w, want);
+    if (want) {
+        atomic_store(&mouse_dx, 0);
+        atomic_store(&mouse_dy, 0);
+        mouse_relative_at = SDL_GetTicksNS();
+    } else {
+        atomic_store(&mouse_rs_x, 0);
+        atomic_store(&mouse_rs_y, 0);
+    }
+}
+
+// Once per frame (input_frame): this frame's motion becomes one contribution. Scaled by the frame rate so a pixel
+// of mouse travel means the same at 30 / 40 / 60 / 120 FPS: at 60 FPS it is motion x sensitivity x 100.
+static void mouse_aim_flush(void) {
+    int dx = atomic_exchange(&mouse_dx, 0), dy = atomic_exchange(&mouse_dy, 0);
+    int rx = 0, ry = 0;
+    if ((dx || dy) && mouse_aim_wanted()) {
+        float k = g_settings.mouse_aim_sens * 100.0f * ((float)rt_frame_rate() / 60.0f);
+        float fx = (float)dx * k, fy = (float)dy * k;
+        rx = fx > 32767.0f ? 32767 : fx < -32767.0f ? -32767 : (int)lroundf(fx);
+        fy = g_settings.mouse_aim_invert ? fy : -fy;  // screen down is stick down (the stick's up is positive)
+        ry = fy > 32767.0f ? 32767 : fy < -32767.0f ? -32767 : (int)lroundf(fy);
+    }
+    atomic_store(&mouse_rs_x, rx);
+    atomic_store(&mouse_rs_y, ry);
+}
+
 // Through the bindings (runtime/hle/bindings.c: g_bind_key), read on every key event, so a rebind applies at once.
 static void recompute_keyboard(void) {
     uint64_t b = 0;
@@ -89,7 +156,8 @@ static void recompute_pad(void) {
     pad_lx = lx; pad_ly = ly; pad_rx = rx; pad_ry = ry;
 }
 
-// Forget held keys (the menu took focus); the gamepad is re-read on its next event.
+// Forget held keys (the menu took focus); the gamepad is re-read on its next event. The mouse aim drops its
+// motion and contribution too (this runs on either thread, so everything it clears is atomic).
 void input_reset(void) {
     memset(keys_down, 0, sizeof keys_down);
     atomic_store(&mouse_btn_left, false);
@@ -97,6 +165,10 @@ void input_reset(void) {
     atomic_store(&mouse_btn_middle, false);
     atomic_store(&mouse_btn_x1, false);
     atomic_store(&mouse_btn_x2, false);
+    atomic_store(&mouse_dx, 0);
+    atomic_store(&mouse_dy, 0);
+    atomic_store(&mouse_rs_x, 0);
+    atomic_store(&mouse_rs_y, 0);
     recompute_keyboard();
 }
 
@@ -186,6 +258,14 @@ void input_handle_event(const SDL_Event *e) {
             else if (btn == SDL_BUTTON_X1) atomic_store(&mouse_btn_x1, down);
             else if (btn == SDL_BUTTON_X2) atomic_store(&mouse_btn_x2, down);
             recompute_keyboard();
+        }
+        break;
+    case SDL_EVENT_MOUSE_MOTION:
+        // Only what relative mode asked for steers the aim (a wandering cursor must not), and never the jump the
+        // mode switch itself makes - so a stray pixel of absolute motion never reaches the stick.
+        if (mouse_relative && SDL_GetTicksNS() > mouse_relative_at + MOUSE_REL_SETTLE_NS) {
+            atomic_fetch_add(&mouse_dx, (int32_t)lroundf(e->motion.xrel));
+            atomic_fetch_add(&mouse_dy, (int32_t)lroundf(e->motion.yrel));
         }
         break;
     case SDL_EVENT_GAMEPAD_ADDED:
@@ -352,8 +432,11 @@ static void host_test_frame(uint64_t frame) {
 
 static uint64_t g_pad_obj;
 volatile int g_inject_plus;  // frames to hold Plus for the game (movie.c: A/B skip the opening on rando seeds)
-RT_ON_RESET(input_reboot_reset) { g_pad_obj = 0; g_inject_plus = 0; }  // (reboot: the controller object was guest memory)
+// (reboot: the controller object was guest memory; with the game down the mouse belongs to the start screen again)
+RT_ON_RESET(input_reboot_reset) { g_pad_obj = 0; g_inject_plus = 0; mouse_aim_live = false; }
 void input_frame(uint64_t frame) {
+    mouse_aim_live = true;  // (the start screen's own loop: nothing here, so the mouse stays theirs)
+    mouse_aim_flush();      // this frame's motion, in or out, once for every poll of fill_state below
     if (g_pad_obj && getenv("LARECOMP_DUMP_PAD") && frame % 600 == 0) {
         const uint8_t *m = (const uint8_t *)(uintptr_t)(g_pad_obj - 0x98);
         LOG("[pad] mgr %llx 4e0=%u 4e4=%u 4e8=%u 548=%#x 54c..=%02x %02x %02x 56c=%02x\n", g_pad_obj - 0x98,
@@ -469,8 +552,10 @@ static void fill_state(Cpu *c) {
         if (g_inject_plus > 0) { until = renderer_present_count() + 10; g_inject_plus = 0; }
         if (renderer_present_count() < until) b |= 1ull << BTN_PLUS;
     }
+    // the mouse aim's own contribution (mouse_aim_flush): one value per frame, read here as often as the game polls
+    int32_t mx = menu ? 0 : atomic_load(&mouse_rs_x), my = menu ? 0 : atomic_load(&mouse_rs_y);
     int32_t lx = clamp_axis((menu ? 0 : key_lx + pad_lx) + script_lx), ly = clamp_axis((menu ? 0 : key_ly + pad_ly) + script_ly);
-    int32_t rx = clamp_axis((menu ? 0 : key_rx + pad_rx) + script_rx), ry = clamp_axis((menu ? 0 : key_ry + pad_ry) + script_ry);
+    int32_t rx = clamp_axis((menu ? 0 : key_rx + pad_rx + mx) + script_rx), ry = clamp_axis((menu ? 0 : key_ry + pad_ry + my) + script_ry);
 
 
     extern bool mirror_input(void);  // mirror mode, the world on screen (runtime/hle/mirror.c): left and right swap

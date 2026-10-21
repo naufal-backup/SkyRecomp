@@ -10,10 +10,12 @@ The stores at `0x700104a1ac` and `0x700104a1d0` publish the shared simulation st
 
 At 120 FPS the step follows monotonic elapsed time, including when the target cannot be sustained. Steps are capped at 33.3 ms; stalls of 100 ms or longer restart the clock instead of advancing through loading time. The display timer, Vulkan limiter, neutral motion-sensor period and dynamic-resolution budget follow the selected target. The audio renderer retains its independent sample clock.
 
+The 30 / 40 FPS targets take the simpler route of the 60 FPS one: the step and its millisecond duration are simply scaled (x2 and x1.5), so the same ticks are run over fewer frames, with no elapsed-time correction.
+
 ## Validation
 
 - `python tools/test_gen.py`: patch gating and register updates for portable C and AArch64 emission, plus indirect-branch regressions.
-- `clang -O1 tools/test_frame_rate.c runtime/frame_rate.c -o build/test_frame_rate.exe`: 60/120 targets, unsupported builds, real-time advancement at 60/80/100/120 actual FPS, integer ticks, millisecond conversion and stall handling.
+- `clang -O1 tools/test_frame_rate.c runtime/frame_rate.c -o build/test_frame_rate.exe`: the 30 / 40 / 60 / 120 targets (integer ticks and milliseconds summing to one second at each), unsupported settings falling back to 60, real-time advancement at 60/80/100/120 actual FPS and stall handling.
 - Windows/Vulkan room tests reached 120.3 FPS over a measurement interval. This used an RTX 3090, a 1280x720 window, 50% internal resolution and optimized guest code; it is not a performance guarantee for other scenes or settings.
 - A scripted 0.75-second forward input travelled 283.32 units at 60 FPS and 279.24 units in 120 FPS mode, a 1.44% difference within the input sampling interval. The integrated game clock matched elapsed wall time.
 - Both audio recordings used 32 kHz stereo with approximately 200 renderer blocks per second. Samples were finite and remained below full scale. Increasing visual FPS did not double the audio clock.

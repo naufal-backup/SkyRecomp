@@ -459,11 +459,17 @@ static void tab_display(void) {
     }
     opt_toggle("Show FPS", &g_settings.show_fps, false, "Shows the frame rate in the top right corner.");
     if (g_is_skyward) {
-        const char *rates[] = {"60 FPS", "120 FPS (Experimental)"};
-        int rate = g_settings.frame_rate == 120;
-        if (opt_choice("Frame rate", &rate, rates, 2, 0,
-                       "Sets the rendering target while preserving game speed. 120 FPS requires faster hardware and a high refresh rate display."))
-            g_settings.frame_rate = rate ? 120 : 60;
+        // frame rate -> settings frame_rate (like the resolution row: the ini value, not the list position)
+        static const char *const rates[] = {"30 FPS", "40 FPS", "60 FPS", "120 FPS (Experimental)"};
+        static const int rate_val[] = {30, 40, 60, 120};
+        int ri = 2;  // 60: the default
+        for (int i = 0; i < 4; i++) if (g_settings.frame_rate == rate_val[i]) ri = i;
+        if (opt_choice("Frame rate", &ri, rates, 4, 2,
+                       "Sets the rendering target while game speed is preserved (the simulation still runs its "
+                       "original ticks per second, over fewer frames at 30 / 40 and more at 120). 30 / 40 FPS are "
+                       "for slower machines or a fixed low refresh rate; 120 FPS needs faster hardware and a high "
+                       "refresh rate display."))
+            g_settings.frame_rate = rate_val[ri];
     }
 
     opt_section("Rendering");

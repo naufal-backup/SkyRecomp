@@ -44,6 +44,7 @@ extern "C" {
 #include "settings.h"
 #include "input_bind.h"
 void controls_bindings_draw(float scale);  // ui/controls_ui.mm
+void input_mouse_pump(void);  // hle/input.c: the mouse aim's relative mouse mode (off on the start screen)
 void ui_window_init(void);
 SDL_Window *ui_window(void);
 #ifdef __APPLE__
@@ -86,14 +87,15 @@ static void save_png(id<MTLTexture> tex, const char *path) {
 static const uint8_t BUILD_ID[8] = {0xd8, 0x24, 0xd4, 0xb1, 0xbb, 0xd4, 0x5d, 0x03};  // Skyward Sword HD v1.0.0 main
 // The release tag this build is (also names the release files; Makefile / tools/bundle_macos.sh / make_dmg.sh read
 // it): beta_<n> until 1.0, then v<major>.<minor>.<patch>.
-#define LARECOMP_VERSION "v1.0.5"
+#define LARECOMP_VERSION "v1.0.6"
 
 // ------------------------------------------------------------------ update check
 // The start screen asks GitHub for the project's releases once per launch (a background curl, which macOS and
 // Windows 10+ ship) and offers the best one if it outranks this build: any v1.0.0+ above every beta, betas by
 // number; other tags (the alpha_* ones) are ignored. Offline / no curl / anything unexpected: nothing is shown.
-#define RELEASES_URL "https://api.github.com/repos/Apolinario-coder/SkyRecomp/releases?per_page=100"
-#define RELEASE_PAGE "https://github.com/Apolinario-coder/SkyRecomp/releases/tag/"
+// (this fork: its own releases, so an upstream release is never offered as an update for a mouse-aim build)
+#define RELEASES_URL "https://api.github.com/repos/naufal-backup/skyrecomp-mouse-support/releases?per_page=100"
+#define RELEASE_PAGE "https://github.com/naufal-backup/skyrecomp-mouse-support/releases/tag/"
 
 static long long tag_rank(const std::string &t) {
     int n, a, b, c;
@@ -1099,6 +1101,7 @@ extern "C" void launcher_run(const char *root) {
             if (!launcher_pad_event(e)) ImGui_ImplSDL3_ProcessEvent(&e);
             if (e.type == SDL_EVENT_QUIT) exit(0);
         }
+        input_mouse_pump();  // (game torn down: it hands the cursor back here)
         // extraction finished: re-check, load the background
         pthread_mutex_lock(&g_lock);
         bool busy = g_busy;

@@ -8,11 +8,6 @@ on:
         required: true
         default: v1.0.6
         type: string
-      build_macos:
-        description: Also build the macOS release (tag pushes always do)
-        required: false
-        default: false
-        type: boolean
   push:
     tags:
       - 'v*'
@@ -24,6 +19,7 @@ env:
   RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
 
 jobs:
+  # Fork skyrecomp-mouse-support: releases are Linux only (the upstream macOS job was removed here).
   # The release is created first so every platform job can upload to it, whether it exists already (a tag push) or not
   # (a manual run on a branch).
   prepare-release:
@@ -126,91 +122,3 @@ jobs:
             "build/dist/SkyRecomp-${RELEASE_TAG}-Linux-x86_64.tar.gz" \
             --clobber
 
-  build-macos:
-    name: Build macOS Release
-    runs-on: macos-14
-    needs: prepare-release
-    if: github.event_name == 'push' || inputs.build_macos
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Install Dependencies via Homebrew
-        run: |
-          brew install sdl3 ffmpeg cmake ninja
-
-      - name: Compile Sky Recomp
-        run: |
-          sed -i.bak "s/^#define LARECOMP_VERSION .*/#define LARECOMP_VERSION \"$RELEASE_TAG\"/" runtime/ui/launcher.mm
-          make -j$(sysctl -n hw.ncpu) build/skyrecomp
-
-      - name: Build game setup tools
-        run: |
-          python3 -m venv build/setup-venv
-          build/setup-venv/bin/pip install pyinstaller==6.22.3 capstone==5.0.9 unicorn==2.1.4 lz4==4.4.5
-          build/setup-venv/bin/python -m PyInstaller --noconfirm --clean --log-level WARN --distpath build/helper --workpath build/pyinstaller tools/lasgen.spec
-          bash tools/fetch_zig.sh
-
-      - name: Create macOS App Bundle & DMG
-        run: |
-          APP="Sky Recomp.app"
-          mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Frameworks"
-          cp build/skyrecomp "$APP/Contents/MacOS/skyrecomp"
-          strip -S "$APP/Contents/MacOS/skyrecomp"
-          cp docs/icon/icon.icns "$APP/Contents/Resources/icon.icns"
-          cp docs/icon/icon_1024.png "$APP/Contents/Resources/icon.png"
-          [ -f Baloo2-SemiBold.ttf ] && cp Baloo2-SemiBold.ttf "$APP/Contents/Resources/"
-          [ -f Baloo2-OFL.txt ] && cp Baloo2-OFL.txt "$APP/Contents/Resources/"
-          cp README.md LICENSE CHANGELOG.md "$APP/Contents/Resources/"
-          [ -f LICENSE-LASRecomp ] && cp LICENSE-LASRecomp "$APP/Contents/Resources/" || true
-          cp -R build/helper/lasgen build/zig "$APP/Contents/Resources/"
-          mkdir -p "$APP/Contents/Resources/gamelib-src"
-          cp runtime/cpu.h runtime/simd.h runtime/simd_fp.h runtime/gamelib.h tools/gamelib_entry.c runtime/hle/hle_symbols.txt "$APP/Contents/Resources/gamelib-src/"
-
-          cat > "$APP/Contents/Info.plist" <<EOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-              <key>CFBundleDevelopmentRegion</key><string>en</string>
-              <key>CFBundleExecutable</key><string>skyrecomp</string>
-              <key>CFBundleIdentifier</key><string>com.skyrecomp.app</string>
-              <key>CFBundleName</key><string>Sky Recomp</string>
-              <key>CFBundleDisplayName</key><string>Sky Recomp</string>
-              <key>CFBundleIconFile</key><string>icon</string>
-              <key>CFBundlePackageType</key><string>APPL</string>
-              <key>CFBundleShortVersionString</key><string>${RELEASE_TAG#v}</string>
-              <key>CFBundleVersion</key><string>${RELEASE_TAG#v}</string>
-              <key>LSMinimumSystemVersion</key><string>11.0</string>
-              <key>LSArchitecturePriority</key><array><string>arm64</string></array>
-              <key>LSApplicationCategoryType</key><string>public.app-category.games</string>
-              <key>NSHighResolutionCapable</key><true/>
-          </dict>
-          </plist>
-          EOF
-          printf 'APPL????' > "$APP/Contents/PkgInfo"
-
-          # Bundle Homebrew dylibs
-          for d in $(otool -L "$APP/Contents/MacOS/skyrecomp" | awk '{print $1}' | grep '/opt/homebrew'); do
-            name=$(basename "$d")
-            cp "$d" "$APP/Contents/Frameworks/$name" || true
-            chmod u+w "$APP/Contents/Frameworks/$name" 2>/dev/null || true
-            install_name_tool -change "$d" "@rpath/$name" "$APP/Contents/MacOS/skyrecomp" 2>/dev/null || true
-          done
-          install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP/Contents/MacOS/skyrecomp" 2>/dev/null || true
-
-          codesign -f -s - "$APP"
-
-          STAGE=$(mktemp -d)
-          ditto "$APP" "$STAGE/Sky Recomp.app"
-          ln -s /Applications "$STAGE/Applications"
-          hdiutil create -volname "Sky Recomp ${RELEASE_TAG}" -srcfolder "$STAGE" -fs HFS+ -format UDZO -imagekey zlib-level=9 -ov SkyRecomp-${RELEASE_TAG}-macOS.dmg
-          rm -rf "$STAGE"
-          zip -r SkyRecomp-${RELEASE_TAG}-macOS.zip "$APP"
-
-      - name: Upload to GitHub Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
-        run: |
-          gh release upload "$RELEASE_TAG" SkyRecomp-${RELEASE_TAG}-macOS.dmg SkyRecomp-${RELEASE_TAG}-macOS.zip --clobber

@@ -955,6 +955,25 @@ static bool draw_text(float *cv, const char *text) {
     return true;
 }
 
+// A mouse, seen from above: its body with the two buttons split at the top, and which of the five this binding is
+// (that button's half filled, the wheel, or a tick beside the body for a side button).
+static void draw_mouse_label(int btn, float *cv) {
+    draw_rect(cv, 78, 44, 178, 214, 16);  // body
+    Seg s[2] = {{128, 46, 128, 112}, {80, 112, 176, 112}};  // the buttons' divider, and their bottom edge
+    draw_segs(cv, s, 2, 14);
+    if (btn == SDL_BUTTON_LEFT || btn == SDL_BUTTON_RIGHT) {  // solid: that button's own half
+        int x0 = btn == SDL_BUTTON_LEFT ? 82 : 132, x1 = btn == SDL_BUTTON_LEFT ? 124 : 174;
+        for (int y = 48; y < 110; y++)
+            for (int x = x0; x < x1; x++) cv[y * CV + x] = 1.0f;
+    } else if (btn == SDL_BUTTON_MIDDLE) {
+        draw_ring(cv, 128, 78, 22, 16);  // the wheel, between the buttons
+    } else {  // a side button (Mouse 4 / Mouse 5): a tick beside the body, whichever side reads clearer
+        float x = btn == SDL_BUTTON_X1 ? 56.0f : 200.0f;
+        Seg t[1] = {{x, 96, x, 140}};
+        draw_segs(cv, t, 1, 16);
+    }
+}
+
 // The new label `role` (R_* / L_*, canvas coverage). symbol = true: a square pictogram (fitted by its size, not cap
 // height).
 static bool draw_label(int role, int style, float *cv, bool *symbol) {
@@ -991,6 +1010,11 @@ static bool draw_label(int role, int style, float *cv, bool *symbol) {
             Seg s[3];
             for (int i = 0; i < 3; i++) s[i] = (Seg){256 - up[i][1], up[i][0], 256 - up[i][3], up[i][2]};
             draw_segs(cv, s, 3, 16);
+            *symbol = true;
+            return true;
+        }
+        if (sc > 512 && sc <= 512 + 5) {  // a mouse button (bindings.c: 512 + SDL button): a mouse, not a key name
+            draw_mouse_label(sc - 512, cv);
             *symbol = true;
             return true;
         }

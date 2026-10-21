@@ -111,4 +111,39 @@ extern "C" void controls_bindings_draw(float scale) {
                         "the controller's Back + Start held together, or its Home / Guide button - so this page can't be "
                         "locked out. The game's button icons follow the controller bindings.");
     ImGui::PopTextWrapPos();
+
+    // Mouse aim: the mouse steers the right stick while the aim button is held (runtime/hle/input.c). It is a
+    // separate setting, so a mouse button bound above stays bound: holding it to aim also presses it.
+    ImGui::Spacing();
+    ImGui::SeparatorText("Mouse aim");
+    {
+        static const char *const modes[] = {"Off", "While the aim button is held", "Also while R is held"};
+        int mode = g_settings.mouse_aim;
+        if (ImGui::Combo("Steer with the mouse", &mode, modes, 3)) {
+            g_settings.mouse_aim = mode;
+            settings_save();
+        }
+        static const char *const mods[] = {"Mouse 5", "Mouse 4", "Mouse 3"};
+        int mod = g_settings.mouse_aim_mod == 4 ? 1 : g_settings.mouse_aim_mod == 3 ? 2 : 0;
+        if (ImGui::Combo("Aim button", &mod, mods, 3)) {
+            g_settings.mouse_aim_mod = mod == 1 ? 4 : mod == 2 ? 3 : 5;
+            settings_save();
+        }
+        float sens = g_settings.mouse_aim_sens;
+        if (ImGui::SliderFloat("Sensitivity", &sens, 0.05f, 3.0f, "%.2f")) g_settings.mouse_aim_sens = sens;
+        if (ImGui::IsItemDeactivatedAfterEdit()) settings_save();  // (a drag writes once, at the end)
+        bool inv = g_settings.mouse_aim_invert;
+        if (ImGui::Checkbox("Invert Y", &inv)) {
+            g_settings.mouse_aim_invert = inv;
+            settings_save();
+        }
+        ImGui::PushTextWrapPos(0);
+        ImGui::TextDisabled("Hold the aim button and move the mouse to steer the right stick with it: aim an item "
+                            "(raise it with R first), turn the camera (hold L), swing with a flick of the mouse. The "
+                            "stick is never moved on its own, so walking and swinging by hand stay put - unless "
+                            "\"Also while R is held\" is chosen, which aims while an item is up without the button. "
+                            "Sensitivity is a feel: raise it in game if aiming turns too little. The aim button is "
+                            "still a mouse button of its own here, so binding it also binds that press.");
+        ImGui::PopTextWrapPos();
+    }
 }
