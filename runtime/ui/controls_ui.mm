@@ -117,9 +117,10 @@ extern "C" void controls_bindings_draw(float scale) {
     ImGui::Spacing();
     ImGui::SeparatorText("Mouse aim");
     {
-        static const char *const modes[] = {"Off", "While the aim button is held", "Also while R is held"};
+        static const char *const modes[] = {"Off", "While the aim button is held", "Also while R is held",
+                                            "Toggle: press the aim button once"};
         int mode = g_settings.mouse_aim;
-        if (ImGui::Combo("Steer with the mouse", &mode, modes, 3)) {
+        if (ImGui::Combo("Steer with the mouse", &mode, modes, 4)) {
             g_settings.mouse_aim = mode;
             settings_save();
         }
@@ -130,7 +131,7 @@ extern "C" void controls_bindings_draw(float scale) {
             settings_save();
         }
         float sens = g_settings.mouse_aim_sens;
-        if (ImGui::SliderFloat("Sensitivity", &sens, 0.05f, 3.0f, "%.2f")) g_settings.mouse_aim_sens = sens;
+        if (ImGui::SliderFloat("Sensitivity", &sens, 0.05f, 10.0f, "%.2f")) g_settings.mouse_aim_sens = sens;
         if (ImGui::IsItemDeactivatedAfterEdit()) settings_save();  // (a drag writes once, at the end)
         bool inv = g_settings.mouse_aim_invert;
         if (ImGui::Checkbox("Invert Y", &inv)) {
@@ -141,9 +142,13 @@ extern "C" void controls_bindings_draw(float scale) {
         ImGui::TextDisabled("Hold the aim button and move the mouse to steer the right stick with it: aim an item "
                             "(raise it with R first), turn the camera (hold L), swing with a flick of the mouse. The "
                             "stick is never moved on its own, so walking and swinging by hand stay put - unless "
-                            "\"Also while R is held\" is chosen, which aims while an item is up without the button. "
-                            "Sensitivity is a feel: raise it in game if aiming turns too little. The aim button is "
-                            "still a mouse button of its own here, so binding it also binds that press.");
+                            "\"Also while R is held\" is chosen, which aims while an item is up without the button, "
+                            "or \"Toggle\", which latches the aim with one press of the button; the next press "
+                            "releases it, and it unlatches on a reboot to the start screen or a mode switch. While "
+                            "latched the cursor stays locked - the in-game menu and an unfocused window take it "
+                            "back, and it is locked again when they close. Sensitivity is a feel: raise it in game "
+                            "if aiming turns too little. The aim button is still a mouse button of its own here, "
+                            "so binding it also binds that press.");
         ImGui::PopTextWrapPos();
     }
 }

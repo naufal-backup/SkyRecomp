@@ -13,8 +13,9 @@ enum { UPSCALE_BILINEAR = 0, UPSCALE_METALFX = 1 /* macOS */, UPSCALE_FSR1 = 2 /
 #endif
 enum { AA_OFF = 0, AA_SMAA = 1 };
 // Mouse aim (Controls tab): the mouse steers the right stick - item aiming (raise it with R), the camera (hold L)
-// and sword swings (flick) - while the aim mouse button is held; AUTO also aims whenever R is held (runtime/hle/input.c)
-enum { MOUSE_AIM_OFF = 0, MOUSE_AIM_MODIFIER = 1, MOUSE_AIM_AUTO = 2 };
+// and sword swings (flick) - while the aim mouse button is held; AUTO also aims whenever R is held, and TOGGLE
+// latches the aim with one press of that button instead of holding it (runtime/hle/input.c)
+enum { MOUSE_AIM_OFF = 0, MOUSE_AIM_MODIFIER = 1, MOUSE_AIM_AUTO = 2, MOUSE_AIM_TOGGLE = 3 };
 enum { PROMPTS_AUTO = 0, PROMPTS_NINTENDO = 1, PROMPTS_XBOX = 2, PROMPTS_PLAYSTATION = 3, PROMPTS_KEYBOARD = 4 };
 enum { CHAOS_LETTERS_OFF = 0, CHAOS_LETTERS_EXPLORED = 1, CHAOS_LETTERS_MAP = 2 /* explored, all with the Map */ };
 // System language served to the game (runtime/services/am.c GetDesiredLanguage, services/hid_set.c GetLanguageCode):
@@ -38,8 +39,8 @@ typedef struct {
     bool dpad_move;      // the d-pad (and arrow keys) move Link like the stick
     bool move_360;       // analog movement in any direction (the game snaps the stick to 8): runtime/hle/qol.c
     // mouse aim (Controls tab): the mouse drives the right stick while the aim button is held (runtime/hle/input.c)
-    int mouse_aim;        // MOUSE_AIM_*: off / while the aim button is held / that, or R held (aiming an item)
-    float mouse_aim_sens; // sensitivity: a frame's motion times this steers the stick (0.5 = default, 0.05..3.0)
+    int mouse_aim;        // MOUSE_AIM_*: off / while the aim button is held / that, or R held / latched by one press
+    float mouse_aim_sens; // sensitivity: a frame's motion times this steers the stick (0.5 = default, 0.05..10.0)
     bool mouse_aim_invert;// vertical mouse aim turned around (look up by pushing down)
     int mouse_aim_mod;    // the mouse button that arms it: an SDL button (3 middle, 4 Mouse 4, 5 Mouse 5 = default)
     bool blur_removal;   // no tilt-shift blur at the top / bottom of the screen

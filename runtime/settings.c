@@ -135,9 +135,9 @@ void settings_load(void) {
         else if (!strcmp(key, "inv_keys")) g_settings.inv_keys = atoi(val) != 0;
         else if (!strcmp(key, "dpad_move")) g_settings.dpad_move = atoi(val) != 0;
         else if (!strcmp(key, "move_360")) g_settings.move_360 = atoi(val) != 0;
-        else if (!strcmp(key, "mouse_aim")) {  // 0 = off, 2 = auto, anything else: the default (hold the button)
+        else if (!strcmp(key, "mouse_aim")) {  // 0 = off, 2 = auto, 3 = toggle, anything else: the default (hold)
             int m = atoi(val);
-            g_settings.mouse_aim = m == MOUSE_AIM_OFF ? MOUSE_AIM_OFF : m == MOUSE_AIM_AUTO ? MOUSE_AIM_AUTO
+            g_settings.mouse_aim = m >= MOUSE_AIM_OFF && m <= MOUSE_AIM_TOGGLE ? m
                                                                                            : MOUSE_AIM_MODIFIER;
         }
         else if (!strcmp(key, "mouse_aim_sens")) g_settings.mouse_aim_sens = (float)atof(val);
@@ -178,7 +178,7 @@ void settings_load(void) {
     if (g_settings.volume < 0) g_settings.volume = 0;
     if (g_settings.volume > 2) g_settings.volume = 2;
     if (g_settings.mouse_aim_sens < 0.05f) g_settings.mouse_aim_sens = 0.05f;  // (a 0 here would mute the mouse)
-    if (g_settings.mouse_aim_sens > 3.0f) g_settings.mouse_aim_sens = 3.0f;
+    if (g_settings.mouse_aim_sens > 10.0f) g_settings.mouse_aim_sens = 10.0f;
     g_settings.frame_rate = frame_rate_of(g_settings.frame_rate);
     LOG("[settings] loaded %s\n", SETTINGS_FILE);
 }

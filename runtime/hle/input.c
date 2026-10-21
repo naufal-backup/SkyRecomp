@@ -65,6 +65,7 @@ static _Atomic int32_t mouse_dx, mouse_dy;     // motion since the last flush (x
 static _Atomic int32_t mouse_rs_x, mouse_rs_y; // this frame's right-stick contribution (0 = the mouse isn't aiming)
 static _Atomic bool mouse_aim_live;            // the game's frame loop is running (not the start screen)
 static bool mouse_relative;                    // (main thread) relative mouse mode as it stands
+static _Atomic bool mouse_aim_toggled;           // MOUSE_AIM_TOGGLE: the aim latched by one press of the aim button
 static uint64_t mouse_relative_at;             // (main thread) when it came on (its own first motion is discarded)
 
 #define MOUSE_REL_SETTLE_NS 50000000ull  // the mode switch's own jump: motion this early after it isn't the player's
@@ -78,7 +79,9 @@ static int mouse_aim_button(void) {  // (settings_load keeps this to the UI's th
 // also whenever R is held (an item raised: aiming it, exactly what the right stick does then).
 static bool mouse_aim_wanted(void) {
     if (g_settings.mouse_aim == MOUSE_AIM_OFF || menu_input_captured()) return false;
+    if (g_settings.mouse_aim != MOUSE_AIM_TOGGLE) mouse_aim_toggled = false;  // (a stale latch after switching)
     if (held_key(512 + mouse_aim_button())) return true;
+    if (g_settings.mouse_aim == MOUSE_AIM_TOGGLE) return mouse_aim_toggled;
     if (g_settings.mouse_aim != MOUSE_AIM_AUTO) return false;
     return (key_buttons | pad_buttons) & (1ull << BTN_R);
 }
@@ -252,6 +255,8 @@ void input_handle_event(const SDL_Event *e) {
         if (!menu_input_captured()) {
             bool down = (e->type == SDL_EVENT_MOUSE_BUTTON_DOWN);
             uint8_t btn = e->button.button;
+            if (down && g_settings.mouse_aim == MOUSE_AIM_TOGGLE && mouse_aim_live && btn == mouse_aim_button())
+                mouse_aim_toggled = !mouse_aim_toggled;  // one press latches the aim, another releases it
             if (btn == SDL_BUTTON_LEFT) atomic_store(&mouse_btn_left, down);
             else if (btn == SDL_BUTTON_RIGHT) atomic_store(&mouse_btn_right, down);
             else if (btn == SDL_BUTTON_MIDDLE) atomic_store(&mouse_btn_middle, down);
@@ -433,7 +438,12 @@ static void host_test_frame(uint64_t frame) {
 static uint64_t g_pad_obj;
 volatile int g_inject_plus;  // frames to hold Plus for the game (movie.c: A/B skip the opening on rando seeds)
 // (reboot: the controller object was guest memory; with the game down the mouse belongs to the start screen again)
-RT_ON_RESET(input_reboot_reset) { g_pad_obj = 0; g_inject_plus = 0; mouse_aim_live = false; }
+RT_ON_RESET(input_reboot_reset) {
+    g_pad_obj = 0;
+    g_inject_plus = 0;
+    mouse_aim_live = false;
+    mouse_aim_toggled = false;  // (and no latched aim survives back to the start screen)
+}
 void input_frame(uint64_t frame) {
     mouse_aim_live = true;  // (the start screen's own loop: nothing here, so the mouse stays theirs)
     mouse_aim_flush();      // this frame's motion, in or out, once for every poll of fill_state below
