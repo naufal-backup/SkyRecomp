@@ -140,6 +140,12 @@ extern "C" void controls_bindings_draw(float scale) {
         int coast = g_settings.mouse_aim_coast;
         if (ImGui::SliderInt("Coast after stop", &coast, 0, 600, "%d ms")) g_settings.mouse_aim_coast = coast;
         if (ImGui::IsItemDeactivatedAfterEdit()) settings_save();
+        float floor_pct = g_settings.mouse_aim_floor * 100.0f;
+        if (ImGui::SliderFloat("Aim floor", &floor_pct, 0.0f, 50.0f, "%.0f %%")) g_settings.mouse_aim_floor = floor_pct / 100.0f;
+        if (ImGui::IsItemDeactivatedAfterEdit()) settings_save();
+        float gamma = g_settings.mouse_aim_gamma;
+        if (ImGui::SliderFloat("Aim response", &gamma, 0.5f, 3.0f, "%.2f")) g_settings.mouse_aim_gamma = gamma;
+        if (ImGui::IsItemDeactivatedAfterEdit()) settings_save();
         bool inv = g_settings.mouse_aim_invert;
         if (ImGui::Checkbox("Invert Y", &inv)) {
             g_settings.mouse_aim_invert = inv;
@@ -158,8 +164,10 @@ extern "C" void controls_bindings_draw(float scale) {
                             "Coast keeps a turn going for a moment after the mouse stops, so held directions need "
                             "no constant nudging - aiming an item with R never coasts. With an item up (R) the "
                             "stick is held where the mouse leaves it, so a direction stays put; \"Analog hold\" does "
-                            "that for the camera as well. The aim button is still a mouse button of its own here, "
-                            "so binding it also binds that press.");
+                            "that for the camera as well. Aim floor carries even the smallest movement past the "
+                            "game's own dead zone, and Aim response bends the curve (above 1 is finer near the "
+                            "middle, below 1 is quicker there). The aim button is still a mouse button of its own "
+                            "here, so binding it also binds that press.");
         ImGui::PopTextWrapPos();
     }
 }

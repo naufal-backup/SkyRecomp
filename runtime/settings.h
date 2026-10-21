@@ -46,6 +46,8 @@ typedef struct {
     bool mouse_aim_invert;// vertical mouse aim turned around (look up by pushing down)
     int mouse_aim_mod;    // the mouse button that arms it: an SDL button (3 middle, 4 Mouse 4, 5 Mouse 5 = default)
     int mouse_aim_coast;  // ms the last turn keeps going after the mouse stops (0..600, 200 default; R aim never)
+    float mouse_aim_floor; // the smallest deflection the mouse sends (0..0.5): past the game's own dead zone
+    float mouse_aim_gamma; // the response curve (0.5..3, 1 = linear): above 1 is finer near the middle
     bool blur_removal;   // no tilt-shift blur at the top / bottom of the screen
     bool hide_hero_icon; // no Hero Mode icon on the HUD
     bool mirror_mode;    // the world mirrored left to right (Gameplay tab): renderers + runtime/hle/input.c

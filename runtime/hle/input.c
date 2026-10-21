@@ -71,7 +71,19 @@ static uint64_t mouse_relative_at;
 static int32_t coast_rx, coast_ry;              // the last contribution, kept while coasting (render thread only)
 static uint64_t coast_until;                    // for that long after the last motion (render thread only)
 static int32_t hold_rx, hold_ry;                // the held stick position (render thread only)
-static inline int32_t clamp_stick(int32_t v) { return v > 32767 ? 32767 : v < -32767 ? -32767 : v; }             // (main thread) when it came on (its own first motion is discarded)
+static inline int32_t clamp_stick(int32_t v) { return v > 32767 ? 32767 : v < -32767 ? -32767 : v; }
+
+// The mouse's travel shaped into stick travel: the floor carries even the smallest movement past the game's own
+// dead zone, the gamma bends the curve (above 1: finer near the middle, faster at the edges). Both are off by
+// default (floor 0, gamma 1), which is a straight line from mouse travel to stick travel.
+static int32_t shape_mouse(int32_t v) {
+    float n = (float)v / 32767.0f;
+    if (n > 1.0f) n = 1.0f;
+    if (n < -1.0f) n = -1.0f;
+    float m = powf(fabsf(n), g_settings.mouse_aim_gamma);
+    float o = g_settings.mouse_aim_floor + (1.0f - g_settings.mouse_aim_floor) * m;
+    return (int32_t)lroundf(o * 32767.0f * (n < 0.0f ? -1.0f : 1.0f));
+}             // (main thread) when it came on (its own first motion is discarded)
 
 #define MOUSE_REL_SETTLE_NS 30000000ull  // the mode switch's own jump: motion this early after it isn't the player's
 
@@ -136,6 +148,7 @@ static void mouse_aim_flush(void) {
         rx = fx > 32767.0f ? 32767 : fx < -32767.0f ? -32767 : (int)lroundf(fx);
         fy = g_settings.mouse_aim_invert ? fy : -fy;  // screen down is stick down (the stick's up is positive)
         ry = fy > 32767.0f ? 32767 : fy < -32767.0f ? -32767 : (int)lroundf(fy);
+        rx = shape_mouse(rx), ry = shape_mouse(ry);  // (the mouse's own curve; a pad is untouched)
         coast_rx = rx, coast_ry = ry;
         coast_until = SDL_GetTicksNS() + (uint64_t)g_settings.mouse_aim_coast * 1000000ull;
         hold_rx = hold_ry = 0;  // (leaving the held position: the stick is free again)
@@ -526,6 +539,9 @@ void input_frame(uint64_t frame) {
         else if (!strncmp(name, "STICK_", 6) && name[6] >= '0' && name[6] <= '9') {
             double r = atoi(name + 6) * 3.14159265358979 / 180;
             lx = (int32_t)lround(cos(r) * 32767), ly = (int32_t)lround(sin(r) * 32767);
+        } else if (!strncmp(name, "RSTICK_", 7) && name[7] >= '0' && name[7] <= '9') {
+            double r = atoi(name + 7) * 3.14159265358979 / 180;  // (the right stick at that angle: a sweep of
+            rx = (int32_t)lround(cos(r) * 32767), ry = (int32_t)lround(sin(r) * 32767);  // its magnitude)
         }
         for (int i = 0; i < 16; i++) if (!strcmp(name, names[i])) b |= 1ull << i;
     }

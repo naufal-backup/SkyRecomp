@@ -32,6 +32,8 @@ Settings g_settings = {
     .mouse_aim_sens_y = 0.5f,
     .mouse_aim_mod = 5,               // SDL_BUTTON_X2 = Mouse 5 (SDL_mouse.h: 3 middle, 4 Mouse 4, 5 Mouse 5)
     .mouse_aim_coast = 200,           // ms: the last turn keeps going that long after the mouse stops
+    .mouse_aim_floor = 0.0f,          // (the mouse's own dead zone: the game has one of its own)
+    .mouse_aim_gamma = 1.0f,          // (1 = a straight line from mouse travel to stick travel)
     .inv_keys = true,
     .tracker = true,
     .chaos_letters = CHAOS_LETTERS_MAP,
@@ -147,6 +149,8 @@ void settings_load(void) {
         else if (!strcmp(key, "mouse_aim_invert")) g_settings.mouse_aim_invert = atoi(val) != 0;
         else if (!strcmp(key, "mouse_aim_mod")) g_settings.mouse_aim_mod = mouse_button_of(val);
         else if (!strcmp(key, "mouse_aim_coast")) g_settings.mouse_aim_coast = atoi(val);
+        else if (!strcmp(key, "mouse_aim_floor")) g_settings.mouse_aim_floor = (float)atof(val);
+        else if (!strcmp(key, "mouse_aim_gamma")) g_settings.mouse_aim_gamma = (float)atof(val);
         else if (!strcmp(key, "disabled_mods") || !strcmp(key, "mod_order")) mods_settings_load(key, val);
         else if (!strcmp(key, "blur_removal")) g_settings.blur_removal = atoi(val) != 0;
         else if (!strcmp(key, "hide_hero_icon")) g_settings.hide_hero_icon = atoi(val) != 0;
@@ -188,6 +192,10 @@ void settings_load(void) {
     if (g_settings.mouse_aim_sens_y > 100.0f) g_settings.mouse_aim_sens_y = 100.0f;
     if (g_settings.mouse_aim_coast < 0) g_settings.mouse_aim_coast = 0;  // (0: the stick drops the moment the
     if (g_settings.mouse_aim_coast > 600) g_settings.mouse_aim_coast = 600;  // mouse stops - no coast at all)
+    if (g_settings.mouse_aim_floor < 0.0f) g_settings.mouse_aim_floor = 0.0f;
+    if (g_settings.mouse_aim_floor > 0.5f) g_settings.mouse_aim_floor = 0.5f;
+    if (g_settings.mouse_aim_gamma < 0.5f) g_settings.mouse_aim_gamma = 0.5f;
+    if (g_settings.mouse_aim_gamma > 3.0f) g_settings.mouse_aim_gamma = 3.0f;
     g_settings.frame_rate = frame_rate_of(g_settings.frame_rate);
     LOG("[settings] loaded %s\n", SETTINGS_FILE);
 }
@@ -215,9 +223,9 @@ void settings_save(void) {
     fprintf(f, "dpad_move = %d\n", g_settings.dpad_move);
     fprintf(f, "move_360 = %d\nblur_removal = %d\nhide_hero_icon = %d\n", g_settings.move_360, g_settings.blur_removal,
             g_settings.hide_hero_icon);
-    fprintf(f, "mouse_aim = %d\nmouse_aim_sens = %.2f\nmouse_aim_sens_y = %.2f\nmouse_aim_coast = %d\nmouse_aim_invert = %d\nmouse_aim_mod = mouse%d\n",
+    fprintf(f, "mouse_aim = %d\nmouse_aim_sens = %.2f\nmouse_aim_sens_y = %.2f\nmouse_aim_coast = %d\nmouse_aim_floor = %.3f\nmouse_aim_gamma = %.2f\nmouse_aim_invert = %d\nmouse_aim_mod = mouse%d\n",
             g_settings.mouse_aim, g_settings.mouse_aim_sens_x, g_settings.mouse_aim_sens_y, g_settings.mouse_aim_coast,
-            g_settings.mouse_aim_invert,
+            g_settings.mouse_aim_floor, g_settings.mouse_aim_gamma, g_settings.mouse_aim_invert,
             g_settings.mouse_aim_mod >= 3 && g_settings.mouse_aim_mod <= 5 ? g_settings.mouse_aim_mod : 5);
     mods_settings_save(f);
     static const char *const prompts[] = {"auto", "nintendo", "xbox", "playstation", "keyboard"};

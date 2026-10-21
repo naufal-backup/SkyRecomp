@@ -23,6 +23,9 @@
   keeps the direction it was pushed to), which a mouse cannot express - so with an item up (R) the mouse now
   moves a held position instead of a per-frame nudge, and the new **Analog hold** mode does that for the camera
   as well. The direction stays put until the mouse moves it or the aim is released.
+- **The mouse's own curve**: **Aim floor** (0-50%, default 0) carries even the smallest movement past the game's
+  own dead zone, so a slow mouse no longer stops dead, and **Aim response** (0.5-3, default 1 = a straight line)
+  bends it - above 1 is finer near the middle, below 1 is quicker there. Both default to today's behaviour.
 - **30 FPS and 40 FPS targets**: **Video > Frame rate** now offers 30 / 40 / 60 / 120 FPS. Game speed is preserved
   by running the simulation's original ticks over fewer frames (as at 60, without elapsed-time correction); 60 FPS
   remains the default and the 120 FPS path is untouched. No regenerated game code is needed: the timing hooks apply
