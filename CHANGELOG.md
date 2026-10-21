@@ -12,7 +12,8 @@
   held, which aims while an item is up without the button / **Toggle**, which latches the aim with one press of the
   aim button instead of holding it - the next press releases it, and it unlatches on a reboot to the start screen or
   a mode switch; while latched the cursor stays locked across the in-game menu and unfocused windows), **Aim
-  button**, **Sensitivity** (0.05-10.0, default 0.5) and **Invert Y**, on the Controls page of the start screen and
+  button**, **Sensitivity X** and **Sensitivity Y** (0.05-100.0 each, default 0.5; an older file's single
+  sensitivity loads as both) and **Invert Y**, on the Controls page of the start screen and
   of the in-game menu. While the mouse is steering, the cursor is captured (relative mouse mode) and comes back for
   the menu, a lost focus and the start screen.
 - **30 FPS and 40 FPS targets**: **Video > Frame rate** now offers 30 / 40 / 60 / 120 FPS. Game speed is preserved

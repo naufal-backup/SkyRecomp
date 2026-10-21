@@ -114,8 +114,9 @@ static void mouse_aim_flush(void) {
     int dx = atomic_exchange(&mouse_dx, 0), dy = atomic_exchange(&mouse_dy, 0);
     int rx = 0, ry = 0;
     if ((dx || dy) && mouse_aim_wanted()) {
-        float k = g_settings.mouse_aim_sens * 100.0f * ((float)rt_frame_rate() / 60.0f);
-        float fx = (float)dx * k, fy = (float)dy * k;
+        float kx = g_settings.mouse_aim_sens_x * 100.0f * ((float)rt_frame_rate() / 60.0f);
+        float ky = g_settings.mouse_aim_sens_y * 100.0f * ((float)rt_frame_rate() / 60.0f);
+        float fx = (float)dx * kx, fy = (float)dy * ky;
         rx = fx > 32767.0f ? 32767 : fx < -32767.0f ? -32767 : (int)lroundf(fx);
         fy = g_settings.mouse_aim_invert ? fy : -fy;  // screen down is stick down (the stick's up is positive)
         ry = fy > 32767.0f ? 32767 : fy < -32767.0f ? -32767 : (int)lroundf(fy);

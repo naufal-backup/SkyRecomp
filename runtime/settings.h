@@ -40,7 +40,8 @@ typedef struct {
     bool move_360;       // analog movement in any direction (the game snaps the stick to 8): runtime/hle/qol.c
     // mouse aim (Controls tab): the mouse drives the right stick while the aim button is held (runtime/hle/input.c)
     int mouse_aim;        // MOUSE_AIM_*: off / while the aim button is held / that, or R held / latched by one press
-    float mouse_aim_sens; // sensitivity: a frame's motion times this steers the stick (0.5 = default, 0.05..10.0)
+    float mouse_aim_sens_x; // sensitivity, horizontal: a frame's motion times this steers the stick (0.05..100.0)
+    float mouse_aim_sens_y; // likewise, vertical (the same default; an older file's single value loads as both)
     bool mouse_aim_invert;// vertical mouse aim turned around (look up by pushing down)
     int mouse_aim_mod;    // the mouse button that arms it: an SDL button (3 middle, 4 Mouse 4, 5 Mouse 5 = default)
     bool blur_removal;   // no tilt-shift blur at the top / bottom of the screen
