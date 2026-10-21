@@ -454,6 +454,20 @@ void vk_save_png(const char *path, const uint8_t *rgba, uint32_t w, uint32_t h) 
     SDL_DestroySurface(s);
 }
 
+// The directory of a file to save into, created if needed: the app's working directory is the data root
+// (runtime/paths.c), so a relative path like build/frames has no directory to land in yet.
+static void ensure_dir_of(const char *path) {
+    char tmp[256];
+    snprintf(tmp, sizeof tmp, "%s", path);
+    char *slash = strrchr(tmp, '/');
+    if (!slash) return;
+    *slash = 0;
+    for (char *p = tmp + 1; *p; p++) {
+        if (*p == '/') { *p = 0; mkdir(tmp, 0755); *p = '/'; }
+    }
+    mkdir(tmp, 0755);
+}
+
 // ================================================================== game presentation (metal.m backend_present)
 // Draws the game's image into the window with the widescreen crop, then the overlay menu.
 extern void vk_present_draw(VkCommandBuffer cb, TexBackend *b, float vx, float vy, float vw, float vh, const float pv[8]);
@@ -584,7 +598,10 @@ void backend_present(NvnTexture *t) {
             if ((long)total_frames == at) {
                 char path[256];
                 snprintf(path, sizeof path, "build/frames/frame_%05llu.png", (unsigned long long)total_frames);
-                renderer_save_texture_tex(b, path);
+                // (the presented window image: the game's own texture is not readable here, the window is)
+                extern char g_window_shot_request[256];
+                ensure_dir_of(path);
+                snprintf(g_window_shot_request, sizeof g_window_shot_request, "%s", path);
             }
             if (*next == ',') next++;
         }
@@ -596,7 +613,9 @@ void backend_present(NvnTexture *t) {
         if (shot_from) mkdir("build/frames", 0755);
         snprintf(path, sizeof path, shot_from ? "build/frames/frame_%05llu.png" : "build/frame_%05llu.png",
                  (unsigned long long)total_frames);
-        renderer_save_texture_tex(b, path);
+        extern char g_window_shot_request[256];  // (the window image: the game's texture is not readable in Vulkan)
+        ensure_dir_of(path);
+        snprintf(g_window_shot_request, sizeof g_window_shot_request, "%s", path);
         // a series (SCREENSHOT_FROM) runs on until LARECOMP_WINDOW_SHOT exits
         if (getenv("LARECOMP_EXIT_AFTER_SHOT") && !shot_from) { fflush(stderr); _exit(0); }
     }
