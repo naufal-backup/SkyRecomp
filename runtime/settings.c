@@ -137,9 +137,9 @@ void settings_load(void) {
         else if (!strcmp(key, "inv_keys")) g_settings.inv_keys = atoi(val) != 0;
         else if (!strcmp(key, "dpad_move")) g_settings.dpad_move = atoi(val) != 0;
         else if (!strcmp(key, "move_360")) g_settings.move_360 = atoi(val) != 0;
-        else if (!strcmp(key, "mouse_aim")) {  // 0 = off, 2 = auto, 3 = toggle, anything else: the default (hold)
+        else if (!strcmp(key, "mouse_aim")) {  // 0 = off, 2 = auto, 3 = toggle, 4 = hold, else: the default
             int m = atoi(val);
-            g_settings.mouse_aim = m >= MOUSE_AIM_OFF && m <= MOUSE_AIM_TOGGLE ? m
+            g_settings.mouse_aim = m >= MOUSE_AIM_OFF && m <= MOUSE_AIM_HOLD ? m
                                                                                            : MOUSE_AIM_MODIFIER;
         }
         else if (!strcmp(key, "mouse_aim_sens")) g_settings.mouse_aim_sens_x = (float)atof(val);  // (X: the older single value)

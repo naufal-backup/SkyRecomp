@@ -118,9 +118,10 @@ extern "C" void controls_bindings_draw(float scale) {
     ImGui::SeparatorText("Mouse aim");
     {
         static const char *const modes[] = {"Off", "While the aim button is held", "Also while R is held",
-                                            "Toggle: press the aim button once"};
+                                            "Toggle: press the aim button once",
+                                            "Analog hold: the stick stays where you leave it"};
         int mode = g_settings.mouse_aim;
-        if (ImGui::Combo("Steer with the mouse", &mode, modes, 4)) {
+        if (ImGui::Combo("Steer with the mouse", &mode, modes, 5)) {
             g_settings.mouse_aim = mode;
             settings_save();
         }
@@ -155,8 +156,10 @@ extern "C" void controls_bindings_draw(float scale) {
                             "and an unfocused window take it back, and it is locked again when they close. "
                             "Sensitivities (X and Y) are a feel: raise them in game if aiming turns too little. "
                             "Coast keeps a turn going for a moment after the mouse stops, so held directions need "
-                            "no constant nudging - aiming an item with R never coasts. The aim button is still a "
-                            "mouse button of its own here, so binding it also binds that press.");
+                            "no constant nudging - aiming an item with R never coasts. With an item up (R) the "
+                            "stick is held where the mouse leaves it, so a direction stays put; \"Analog hold\" does "
+                            "that for the camera as well. The aim button is still a mouse button of its own here, "
+                            "so binding it also binds that press.");
         ImGui::PopTextWrapPos();
     }
 }

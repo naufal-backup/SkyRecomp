@@ -69,7 +69,9 @@ static bool mouse_relative;                    // (main thread) relative mouse m
 static _Atomic bool mouse_aim_toggled;           // MOUSE_AIM_TOGGLE: the aim latched by one press of the aim button
 static uint64_t mouse_relative_at;
 static int32_t coast_rx, coast_ry;              // the last contribution, kept while coasting (render thread only)
-static uint64_t coast_until;                    // for that long after the last motion (render thread only)             // (main thread) when it came on (its own first motion is discarded)
+static uint64_t coast_until;                    // for that long after the last motion (render thread only)
+static int32_t hold_rx, hold_ry;                // the held stick position (render thread only)
+static inline int32_t clamp_stick(int32_t v) { return v > 32767 ? 32767 : v < -32767 ? -32767 : v; }             // (main thread) when it came on (its own first motion is discarded)
 
 #define MOUSE_REL_SETTLE_NS 30000000ull  // the mode switch's own jump: motion this early after it isn't the player's
 
@@ -85,6 +87,7 @@ static bool mouse_aim_wanted(void) {
     if (g_settings.mouse_aim != MOUSE_AIM_TOGGLE) mouse_aim_toggled = false;  // (a stale latch after switching)
     if (held_key(512 + mouse_aim_button())) return true;
     if (g_settings.mouse_aim == MOUSE_AIM_TOGGLE) return mouse_aim_toggled;
+    if (g_settings.mouse_aim == MOUSE_AIM_HOLD) return true;  // (the stick is where the mouse left it)
     if (g_settings.mouse_aim != MOUSE_AIM_AUTO) return false;
     return (key_buttons | pad_buttons) & (1ull << BTN_R);
 }
@@ -115,9 +118,18 @@ void input_mouse_pump(void) {
 static void mouse_aim_flush(void) {
     float dx = (float)atomic_exchange(&mouse_dx, 0) / 256.0f, dy = (float)atomic_exchange(&mouse_dy, 0) / 256.0f;
     bool wanted = mouse_aim_wanted();
-    bool item = (key_buttons | pad_buttons) & (1ull << BTN_R);  // aiming an item is precision work: never coasts
+    bool item = (key_buttons | pad_buttons) & (1ull << BTN_R);  // an item is up: the game aims it with the stick
+    bool hold = wanted && (item || g_settings.mouse_aim == MOUSE_AIM_HOLD);
     int rx = 0, ry = 0;
-    if ((dx || dy) && wanted) {
+    if (hold) {
+        // The game holds the stick as a position (an item's aim, the camera): the mouse moves that position and
+        // it stays where it is left, so a direction can be held instead of nudged frame by frame.
+        float kx = g_settings.mouse_aim_sens_x * 100.0f * ((float)rt_frame_rate() / 60.0f);
+        float ky = g_settings.mouse_aim_sens_y * 100.0f * ((float)rt_frame_rate() / 60.0f);
+        hold_rx = clamp_stick(hold_rx + (int)lroundf(dx * kx));
+        hold_ry = clamp_stick(hold_ry + (int)lroundf(dy * ky));
+        rx = hold_rx, ry = g_settings.mouse_aim_invert ? -hold_ry : hold_ry;
+    } else if (wanted && (dx || dy)) {
         float kx = g_settings.mouse_aim_sens_x * 100.0f * ((float)rt_frame_rate() / 60.0f);
         float ky = g_settings.mouse_aim_sens_y * 100.0f * ((float)rt_frame_rate() / 60.0f);
         float fx = dx * kx, fy = dy * ky;
@@ -125,10 +137,14 @@ static void mouse_aim_flush(void) {
         fy = g_settings.mouse_aim_invert ? fy : -fy;  // screen down is stick down (the stick's up is positive)
         ry = fy > 32767.0f ? 32767 : fy < -32767.0f ? -32767 : (int)lroundf(fy);
         coast_rx = rx, coast_ry = ry;
-        coast_until = SDL_GetTicksNS() + (item ? 0 : (uint64_t)g_settings.mouse_aim_coast * 1000000ull);
+        coast_until = SDL_GetTicksNS() + (uint64_t)g_settings.mouse_aim_coast * 1000000ull;
+        hold_rx = hold_ry = 0;  // (leaving the held position: the stick is free again)
     } else if (wanted && !item && SDL_GetTicksNS() < coast_until) {
-        rx = coast_rx, ry = coast_ry;  // coast: the stick is a position the mouse cannot hold, so the last turn is
-    } else coast_until = 0;            // kept a moment (the Coast setting): held directions need no nudging
+        rx = coast_rx, ry = coast_ry;  // coast: the mouse cannot hold a direction, so the last turn is kept a
+    } else {                          // moment (the Coast setting): held directions need no nudging
+        coast_until = 0;
+        hold_rx = hold_ry = 0;        // (and the held position is released with the aim)
+    }
     atomic_store(&mouse_rs_x, rx);
     atomic_store(&mouse_rs_y, ry);
 }

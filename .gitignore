@@ -11,11 +11,15 @@ Rom Game/*.bin
 extracted/romfs.bin
 extracted/romfs/
 extracted/exefs/
+extracted/exefs
 extracted/skygame.dll
 extracted/*.o
 extracted/*.id
 !extracted/INSTRUCTIONS.txt
 !extracted/.gitkeep
+
+# Locally generated game code (make gen: the lifted C of the player's own game files)
+generated-*/
 
 # Locally generated recompiled source code
 ssh_generated/

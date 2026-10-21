@@ -19,6 +19,10 @@
 - **The aim also coasts**: after the mouse stops, the last turn keeps going for a moment (**Coast**, 0-600 ms,
   default 200) so held directions need no constant nudging - aiming an item with R never coasts. The mouse's
   motion is now accumulated in 1/256ths of a pixel, keeping high sensitivities precise on fine movements.
+- **The stick is held where the mouse leaves it**: the game reads the right stick as a position (an item's aim
+  keeps the direction it was pushed to), which a mouse cannot express - so with an item up (R) the mouse now
+  moves a held position instead of a per-frame nudge, and the new **Analog hold** mode does that for the camera
+  as well. The direction stays put until the mouse moves it or the aim is released.
 - **30 FPS and 40 FPS targets**: **Video > Frame rate** now offers 30 / 40 / 60 / 120 FPS. Game speed is preserved
   by running the simulation's original ticks over fewer frames (as at 60, without elapsed-time correction); 60 FPS
   remains the default and the 120 FPS path is untouched. No regenerated game code is needed: the timing hooks apply
