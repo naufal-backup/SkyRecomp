@@ -6,9 +6,9 @@
 
 - **Mouse aim (the mouse as the right stick)**: hold the aim mouse button (**Mouse 5** by default; **Mouse 5** /
   **Mouse 4** / **Mouse 3** selectable in **Controls > Mouse aim**) and move the mouse to steer the right stick -
-  aim an item after raising it with R, turn the camera while L is held, and swing with a flick of the mouse. The
-  stick is never moved for you on its own, so walking, swinging and every button binding (Mouse 4 / 5 included)
-  behave exactly as before. Options: **Steer with the mouse** (Off / While the aim button is held / Also while R is
+  aim an item after raising it with R, or turn the camera: an active aim holds the game's L for you, so the mouse
+  turns the camera directly. The stick is never moved for you on its own, so walking, swinging and every button
+  binding (Mouse 4 / 5 included) behave exactly as before. Options: **Steer with the mouse** (Off / While the aim button is held / Also while R is
   held, which aims while an item is up without the button / **Toggle**, which latches the aim with one press of the
   aim button instead of holding it - the next press releases it, and it unlatches on a reboot to the start screen or
   a mode switch; while latched the cursor stays locked across the in-game menu and unfocused windows), **Aim

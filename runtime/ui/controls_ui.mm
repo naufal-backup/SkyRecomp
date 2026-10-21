@@ -140,15 +140,15 @@ extern "C" void controls_bindings_draw(float scale) {
         }
         ImGui::PushTextWrapPos(0);
         ImGui::TextDisabled("Hold the aim button and move the mouse to steer the right stick with it: aim an item "
-                            "(raise it with R first), turn the camera (hold L), swing with a flick of the mouse. The "
-                            "stick is never moved on its own, so walking and swinging by hand stay put - unless "
-                            "\"Also while R is held\" is chosen, which aims while an item is up without the button, "
-                            "or \"Toggle\", which latches the aim with one press of the button; the next press "
-                            "releases it, and it unlatches on a reboot to the start screen or a mode switch. While "
-                            "latched the cursor stays locked - the in-game menu and an unfocused window take it "
-                            "back, and it is locked again when they close. Sensitivity is a feel: raise it in game "
-                            "if aiming turns too little. The aim button is still a mouse button of its own here, "
-                            "so binding it also binds that press.");
+                            "(raise it with R first) or turn the camera - an active aim holds the game's L for you, "
+                            "so the mouse turns the camera directly. The stick is never moved on its own, so walking "
+                            "and swinging by hand stay put - unless \"Also while R is held\" is chosen, which aims "
+                            "while an item is up without the button, or \"Toggle\", which latches the aim with one "
+                            "press of the button; the next press releases it, and it unlatches on a reboot to the "
+                            "start screen or a mode switch. While latched the cursor stays locked - the in-game menu "
+                            "and an unfocused window take it back, and it is locked again when they close. "
+                            "Sensitivity is a feel: raise it in game if aiming turns too little. The aim button is "
+                            "still a mouse button of its own here, so binding it also binds that press.");
         ImGui::PopTextWrapPos();
     }
 }

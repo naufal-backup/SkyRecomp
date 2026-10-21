@@ -57,7 +57,8 @@ static int held_key(int sc) {
 // In this game the right stick is overloaded: it aims an item Link has raised with R, turns the camera (L held)
 // and swings the sword. The mouse therefore never stands in for it on its own - MOUSE_AIM_MODIFIER (the default)
 // arms it with a mouse button (Mouse 5, also bindable as a button like any other), and MOUSE_AIM_AUTO additionally
-// while R is held, which is the game's own "aiming an item" hold.
+// while R is held, which is the game's own "aiming an item" hold. An active aim also holds L for the player
+// (fill_state), so the stick it steers turns the camera instead of swinging the sword.
 // Motion is accumulated on the main thread (input_handle_event), folded into one atomic contribution per frame in
 // input_frame (render thread), and merely added by fill_state (game thread, polled several times a frame - so the
 // contribution must be stable there and must not be zeroed).
@@ -562,6 +563,11 @@ static void fill_state(Cpu *c) {
         if (g_inject_plus > 0) { until = renderer_present_count() + 10; g_inject_plus = 0; }
         if (renderer_present_count() < until) b |= 1ull << BTN_PLUS;
     }
+    // The right stick turns the camera only while L is held, so an active mouse aim holds L for the player and the
+    // mouse turns the camera directly. Raising an item with R takes the stick over instead - L is not injected
+    // then, so aiming an item stays exactly the game's own (raise with R, steer with the stick).
+    if (!menu && mouse_aim_live && mouse_aim_wanted() && !((key_buttons | pad_buttons) & (1ull << BTN_R)))
+        b |= 1ull << BTN_L;
     // the mouse aim's own contribution (mouse_aim_flush): one value per frame, read here as often as the game polls
     int32_t mx = menu ? 0 : atomic_load(&mouse_rs_x), my = menu ? 0 : atomic_load(&mouse_rs_y);
     int32_t lx = clamp_axis((menu ? 0 : key_lx + pad_lx) + script_lx), ly = clamp_axis((menu ? 0 : key_ly + pad_ly) + script_ly);
